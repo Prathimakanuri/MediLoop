@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Header } from '@/components/common/Header';
 import { MobileNav } from '@/components/common/MobileNav';
 import { Footer } from '@/components/common/Footer';
@@ -23,9 +24,11 @@ import {
   RotateCcw,
   Sparkles,
   Zap,
+  PackageOpen,
 } from 'lucide-react';
 
 export default function ProviderDashboardPage() {
+  const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [categories, setCategories] = useState<EquipmentCategory[]>([]);
   const [listedEquipment, setListedEquipment] = useState<Equipment[]>([]);
@@ -53,18 +56,27 @@ export default function ProviderDashboardPage() {
   const loadProviderData = async () => {
     setLoading(true);
     try {
-      const [uRes, catRes, reqRes, bRes, eqRes] = await Promise.all([
-        fetch('/api/auth/me'),
+      const uRes = await fetch('/api/auth/me');
+      let user: User | null = null;
+      if (uRes.ok) {
+        const uData = await uRes.json();
+        user = uData.user;
+        setCurrentUser(user);
+      }
+
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+
+      // Fetch isolated data for this specific provider facility
+      const facilityId = user.facilityId || '';
+      const [catRes, reqRes, bRes, eqRes] = await Promise.all([
         fetch('/api/categories'),
         fetch('/api/requests?view=provider'),
         fetch('/api/bookings?view=provider'),
-        fetch('/api/equipment'),
+        fetch(`/api/equipment?providerId=${facilityId}`),
       ]);
-
-      if (uRes.ok) {
-        const uData = await uRes.json();
-        setCurrentUser(uData.user);
-      }
 
       if (catRes.ok) {
         const catData = await catRes.json();
@@ -184,7 +196,19 @@ export default function ProviderDashboardPage() {
       const data = await res.json();
       if (res.ok) {
         setShowAddModal(false);
-        showToast('🎉 New equipment listing published successfully!');
+        showToast('🎉 New equipment listing published to the marketplace!');
+        setNewEquipmentForm({
+          name: '',
+          model: '',
+          categoryId: categories[0]?.id || '',
+          description: '',
+          pricePerDay: '1500',
+          depositAmount: '4500',
+          condition: 'Excellent',
+          yearOfManufacture: '2023',
+          usageType: 'ICU Support',
+          powerRequirements: '220V AC, Battery Backup 4h',
+        });
         loadProviderData();
       } else {
         alert(data.error || 'Failed to list equipment');
@@ -197,6 +221,7 @@ export default function ProviderDashboardPage() {
   // Calculate Metrics
   const pendingCount = incomingRequests.filter(r => r.status === 'PENDING').length;
   const totalRevenue = providerBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+  const facilityName = currentUser?.facility?.name || 'Healthcare Facility';
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
@@ -216,13 +241,13 @@ export default function ProviderDashboardPage() {
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 mb-2">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Equipment Provider Management Hub</span>
+              <span>{currentUser?.facility?.tier || 'Hospital'} • Provider Operations Hub</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              City Hospital Equipment Operations
+              {facilityName}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Review incoming emergency rental requests, accept bookings, and manage inventory
+              Review incoming emergency rental requests, accept bookings, and manage your equipment
             </p>
           </div>
 
@@ -245,7 +270,7 @@ export default function ProviderDashboardPage() {
               </div>
             </div>
             <p className="text-2xl font-black text-slate-900 mt-3">{listedEquipment.length}</p>
-            <span className="text-[11px] text-slate-400 mt-0.5 block">Active medical units</span>
+            <span className="text-[11px] text-slate-400 mt-0.5 block">Your active units</span>
           </div>
 
           <div className="p-5 rounded-3xl bg-white border border-slate-200/90 shadow-soft">
@@ -289,7 +314,7 @@ export default function ProviderDashboardPage() {
               <Clock className="w-5 h-5 text-amber-600" />
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-slate-900">Incoming Rental Requests</h2>
-                <p className="text-xs text-slate-500">Incoming requests from Tier-3 &amp; rural healthcare facilities</p>
+                <p className="text-xs text-slate-500">Rental requests submitted by partner healthcare facilities</p>
               </div>
             </div>
 
@@ -302,9 +327,19 @@ export default function ProviderDashboardPage() {
             </button>
           </div>
 
-          {incomingRequests.length === 0 ? (
-            <div className="text-center py-10 bg-white rounded-3xl border border-slate-200 p-6">
-              <p className="text-xs text-slate-500">No incoming rental requests at this time.</p>
+          {loading ? (
+            <div className="p-8 bg-white rounded-3xl border border-slate-200 animate-pulse text-center text-xs text-slate-400">
+              Loading incoming requests...
+            </div>
+          ) : incomingRequests.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-3xl border border-slate-200 p-6 space-y-2">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                <PackageOpen className="w-6 h-6" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-800">No incoming rental requests yet</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                When hospitals request equipment listed by your facility, their rental requests will appear here for one-click approval.
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -398,51 +433,82 @@ export default function ProviderDashboardPage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900">Listed Equipment Inventory</h2>
-              <p className="text-xs text-slate-500">Toggle availability or add accessories</p>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">Your Equipment Listings</h2>
+              <p className="text-xs text-slate-500">Medical equipment published by {facilityName}</p>
             </div>
+
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              Add Unit
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {listedEquipment.map((item) => (
-              <div key={item.id} className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-soft space-y-3">
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-100">
-                  <EquipmentImage
-                    src={item.imageUrl}
-                    alt={item.name}
-                    categorySlug={item.category?.slug || 'ventilator'}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-3 left-3">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                      item.availability === 'AVAILABLE' ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'
-                    }`}>
-                      {item.availability === 'AVAILABLE' ? 'Available' : 'In Use'}
-                    </span>
+          {loading ? (
+            <div className="p-8 bg-white rounded-3xl border border-slate-200 animate-pulse text-center text-xs text-slate-400">
+              Loading equipment inventory...
+            </div>
+          ) : listedEquipment.length === 0 ? (
+            <div className="text-center py-14 bg-white rounded-3xl border border-slate-200 p-6 space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-2">
+                <Layers className="w-7 h-7" />
+              </div>
+              <h3 className="text-base font-bold text-slate-800">No equipment listed yet</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Add your first idle medical equipment unit (Ventilator, ECG, Monitor, Ultrasound, etc.) to make it available for rental.
+              </p>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-md"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Add Your First Equipment</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {listedEquipment.map((item) => (
+                <div key={item.id} className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-soft space-y-3">
+                  <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-100">
+                    <EquipmentImage
+                      src={item.imageUrl}
+                      alt={item.name}
+                      categorySlug={item.category?.slug || 'ventilator'}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-3 left-3">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        item.availability === 'AVAILABLE' ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'
+                      }`}>
+                        {item.availability === 'AVAILABLE' ? 'Available' : 'In Use'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm">{item.name}</h3>
+                    <p className="text-xs text-slate-500">{item.model}</p>
+                    <p className="text-xs font-bold text-teal-700 mt-1">{formatCurrency(item.pricePerDay)} / day</p>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <button
+                      onClick={() => handleToggleAvailability(item)}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-800"
+                    >
+                      Mark {item.availability === 'AVAILABLE' ? 'Unavailable' : 'Available'}
+                    </button>
+
+                    <Link href={`/equipment/${item.id}`} className="text-xs font-medium text-slate-500 hover:text-slate-800">
+                      View Specs →
+                    </Link>
                   </div>
                 </div>
-
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">{item.name}</h3>
-                  <p className="text-xs text-slate-500">{item.model}</p>
-                  <p className="text-xs font-bold text-teal-700 mt-1">{formatCurrency(item.pricePerDay)} / day</p>
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <button
-                    onClick={() => handleToggleAvailability(item)}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-800"
-                  >
-                    Mark {item.availability === 'AVAILABLE' ? 'Unavailable' : 'Available'}
-                  </button>
-
-                  <Link href={`/equipment/${item.id}`} className="text-xs font-medium text-slate-500 hover:text-slate-800">
-                    View Specs →
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Add Equipment Modal */}
@@ -550,7 +616,7 @@ export default function ProviderDashboardPage() {
                     type="submit"
                     className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-md"
                   >
-                    Publish Listing
+                    Publish Listing to Marketplace
                   </button>
                   <button
                     type="button"

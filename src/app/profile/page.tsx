@@ -1,12 +1,15 @@
 import React from 'react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+
 import { Header } from '@/components/common/Header';
 import { MobileNav } from '@/components/common/MobileNav';
 import { Footer } from '@/components/common/Footer';
+import { LogoutButton } from '@/components/common/LogoutButton';
 import {
   Building2,
   Mail,
@@ -16,26 +19,28 @@ import {
   FileText,
   CalendarCheck,
   Layers,
-  Bell,
-  LogOut,
-  ArrowLeftRight,
   Sparkles,
   Bed,
+  User as UserIcon,
 } from 'lucide-react';
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
 
-  const isProvider = user?.role === 'PROVIDER';
-  const facility = user?.facility;
+  if (!user) {
+    redirect('/login');
+  }
 
-  // Requests and bookings stats
+  const isProvider = user.role === 'PROVIDER';
+  const facility = user.facility;
+
+  // Requests and bookings stats strictly for this user
   const requestsCount = await prisma.equipmentRequest.count({
-    where: { requesterId: user?.id || 'usr_customer_demo' },
+    where: { requesterId: user.id },
   });
 
   const bookingsCount = await prisma.booking.count({
-    where: { requesterId: user?.id || 'usr_customer_demo' },
+    where: { requesterId: user.id },
   });
 
   return (
@@ -47,12 +52,12 @@ export default async function ProfilePage() {
         <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-extrabold text-2xl shadow-elevated">
-              {facility?.name?.slice(0, 2).toUpperCase() || 'CC'}
+              {facility?.name?.slice(0, 2).toUpperCase() || user.name.slice(0, 2).toUpperCase()}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
-                  {facility?.name || 'City Care Hospital'}
+                  {facility?.name || user.name}
                 </h1>
                 {facility?.verified && (
                   <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
@@ -62,10 +67,12 @@ export default async function ProfilePage() {
                 )}
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                {facility?.type || 'Primary & Secondary Care Hospital'} • {facility?.tier || 'Tier-3'} Region
+                {facility?.type || 'Healthcare Facility'} • {facility?.tier || 'Tier-3'} Region ({facility?.location || 'Maharashtra'})
               </p>
             </div>
           </div>
+
+          <LogoutButton />
         </div>
 
         {/* Facility Details Grid */}
@@ -78,10 +85,18 @@ export default async function ProfilePage() {
 
             <div className="space-y-3 text-xs text-slate-600">
               <div className="flex items-start gap-2.5">
+                <UserIcon className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-slate-400 block font-medium">Administrator / Lead:</span>
+                  <span className="font-semibold text-slate-800">{user.name}</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="text-slate-400 block font-medium">Registered Address:</span>
-                  <span className="font-semibold text-slate-800">{facility?.address || 'Civil Lines, Yavatmal, Maharashtra - 445001'}</span>
+                  <span className="font-semibold text-slate-800">{facility?.address || 'Medical Zone, Central District'}</span>
                 </div>
               </div>
 
@@ -89,7 +104,7 @@ export default async function ProfilePage() {
                 <Phone className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="text-slate-400 block font-medium">Emergency Contact:</span>
-                  <span className="font-semibold text-slate-800">{facility?.contactPhone || '+91 91580 11223'}</span>
+                  <span className="font-semibold text-slate-800">{facility?.contactPhone || user.phone || '+91 98000 00000'}</span>
                 </div>
               </div>
 
@@ -97,7 +112,7 @@ export default async function ProfilePage() {
                 <Mail className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="text-slate-400 block font-medium">Official Dispatch Email:</span>
-                  <span className="font-semibold text-slate-800">{facility?.contactEmail || 'director@citycarehospital.in'}</span>
+                  <span className="font-semibold text-slate-800">{user.email}</span>
                 </div>
               </div>
 
@@ -105,7 +120,7 @@ export default async function ProfilePage() {
                 <Bed className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="text-slate-400 block font-medium">Capacity &amp; Rating:</span>
-                  <span className="font-semibold text-slate-800">{facility?.bedCapacity || 60} Inpatient Beds • ★ {facility?.rating || 4.6} / 5.0</span>
+                  <span className="font-semibold text-slate-800">{facility?.bedCapacity || 50} Inpatient Beds • ★ {facility?.rating || 5.0} / 5.0</span>
                 </div>
               </div>
             </div>
@@ -158,26 +173,6 @@ export default async function ProfilePage() {
               </Link>
             </div>
           </div>
-        </div>
-
-        {/* Demo Switcher Help Box */}
-        <div className="p-5 rounded-3xl bg-teal-50/70 border border-teal-200 text-xs text-teal-900 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <Sparkles className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <span className="font-bold block">Need to test Provider Acceptance Workflow?</span>
-              <p className="text-teal-700 text-[11px] mt-0.5">
-                Use the &ldquo;Simulating&rdquo; dropdown in the top header or click below to switch to City Hospital (Equipment Provider).
-              </p>
-            </div>
-          </div>
-
-          <Link
-            href="/provider"
-            className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs whitespace-nowrap shadow-sm"
-          >
-            Open Provider Hub
-          </Link>
         </div>
       </main>
 

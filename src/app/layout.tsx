@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Providers } from '@/components/common/Providers';
 
 export const metadata: Metadata = {
   title: 'MEDILOOP | Share. Connect. Save Lives.',
@@ -17,7 +18,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full bg-slate-50">
       <body className="h-full min-h-screen flex flex-col font-sans text-slate-900 bg-slate-50 selection:bg-teal-100 selection:text-teal-900">
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

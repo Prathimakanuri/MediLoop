@@ -1,19 +1,24 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { Calendar, Building2, CheckCircle2, ShieldCheck, FileCheck, Truck, Phone, ArrowRight } from 'lucide-react';
+import { Calendar, Building2, CheckCircle2, ShieldCheck, FileCheck, Truck, CreditCard, Clock, AlertCircle } from 'lucide-react';
 import { Booking } from '@/types';
 import { EquipmentImage } from '@/components/common/EquipmentImage';
+import { PaymentModal } from '@/components/bookings/PaymentModal';
 import { formatDate, formatCurrency, getStatusColor } from '@/lib/utils';
 
 interface BookingCardProps {
   booking: Booking;
   isProviderView?: boolean;
+  onPaymentSuccess?: () => void;
 }
 
-export function BookingCard({ booking, isProviderView = false }: BookingCardProps) {
+export function BookingCard({ booking: initialBooking, isProviderView = false, onPaymentSuccess }: BookingCardProps) {
+  const [booking, setBooking] = useState<Booking>(initialBooking);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const statusInfo = getStatusColor(booking.status);
+  const isPaid = (booking as any).paymentStatus === 'PAID';
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-soft hover:shadow-card transition-all flex flex-col md:flex-row gap-5 items-start justify-between">
@@ -30,13 +35,23 @@ export function BookingCard({ booking, isProviderView = false }: BookingCardProp
 
         <div className="flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}>
-              <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
-              {statusInfo.label}
+            <span className="text-xs font-bold font-mono text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-lg border border-teal-100">
+              #{booking.bookingNumber}
             </span>
 
-            <span className="text-xs font-bold font-mono text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-100">
-              {booking.bookingNumber}
+            {/* Clean, unambiguous payment status badge */}
+            {isPaid ? (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Paid &amp; Confirmed ✓
+              </span>
+            ) : (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 animate-pulse">
+                <Clock className="w-3 h-3 text-amber-700" /> Unpaid • Payment Required
+              </span>
+            )}
+
+            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}>
+              {statusInfo.label}
             </span>
           </div>
 
@@ -48,8 +63,8 @@ export function BookingCard({ booking, isProviderView = false }: BookingCardProp
             <Building2 className="w-3.5 h-3.5 text-teal-600" />
             <span className="font-semibold">
               {isProviderView
-                ? `Rented to: ${booking.requester?.facility?.name || booking.requester?.name || 'Hospital'}`
-                : `Provider: ${booking.provider?.name || 'City Hospital'}`}
+                ? `Rented by: ${booking.requester?.facility?.name || booking.requester?.name || 'Hospital'}`
+                : `Equipment Provider: ${booking.provider?.name || 'Healthcare Facility'}`}
             </span>
           </div>
 
@@ -65,21 +80,14 @@ export function BookingCard({ booking, isProviderView = false }: BookingCardProp
               <span>Rate: {formatCurrency(booking.pricePerDay)}/day</span>
             </div>
           </div>
-
-          {booking.trackingNotes && (
-            <div className="flex items-center gap-1.5 text-xs text-teal-700 bg-teal-50/70 px-3 py-1.5 rounded-xl border border-teal-100/60">
-              <Truck className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="line-clamp-1">{booking.trackingNotes}</span>
-            </div>
-          )}
         </div>
       </div>
 
       {/* Right Total & Actions */}
       <div className="w-full md:w-auto flex md:flex-col justify-between items-end gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 flex-shrink-0">
         <div className="text-left md:text-right">
-          <span className="text-[11px] text-slate-500 block">Total Rental Amount</span>
-          <span className="text-lg font-extrabold text-teal-700">
+          <span className="text-[11px] text-slate-500 block">Total Rental Fee</span>
+          <span className="text-lg font-black text-teal-700">
             {formatCurrency(booking.totalAmount)}
           </span>
           <span className="text-[10px] text-slate-400 block mt-0.5">
@@ -87,14 +95,39 @@ export function BookingCard({ booking, isProviderView = false }: BookingCardProp
           </span>
         </div>
 
-        <Link
-          href={`/bookings/${booking.id}`}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 shadow-sm transition-all"
-        >
-          <FileCheck className="w-3.5 h-3.5" />
-          <span>View Rental Pass</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          {!isPaid && !isProviderView && (
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-teal-600 hover:bg-teal-700 text-white shadow-md shadow-teal-600/20 active:scale-95 transition-all"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Pay Now</span>
+            </button>
+          )}
+
+          <Link
+            href={`/bookings/${booking.id}`}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+          >
+            <FileCheck className="w-3.5 h-3.5" />
+            <span>{isPaid ? 'View Invoice & Receipt' : 'View Pass (Unpaid)'}</span>
+          </Link>
+        </div>
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <PaymentModal
+          booking={booking}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={(updated) => {
+            setBooking(updated);
+            setShowPaymentModal(false);
+            if (onPaymentSuccess) onPaymentSuccess();
+          }}
+        />
+      )}
     </div>
   );
 }

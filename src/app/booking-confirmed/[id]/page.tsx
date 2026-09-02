@@ -8,6 +8,7 @@ import { Header } from '@/components/common/Header';
 import { MobileNav } from '@/components/common/MobileNav';
 import { Footer } from '@/components/common/Footer';
 import { EquipmentImage } from '@/components/common/EquipmentImage';
+import { PaymentModal } from '@/components/bookings/PaymentModal';
 import { Booking, User } from '@/types';
 import { formatDate, formatCurrency, getStatusColor } from '@/lib/utils';
 import {
@@ -20,6 +21,8 @@ import {
   Truck,
   Sparkles,
   Printer,
+  CreditCard,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function BookingConfirmedPage() {
@@ -29,9 +32,9 @@ export default function BookingConfirmedPage() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
-    // Trigger confetti celebration on page load
     try {
       confetti({
         particleCount: 80,
@@ -88,13 +91,14 @@ export default function BookingConfirmedPage() {
   }
 
   const statusInfo = getStatusColor(booking.status);
+  const isPaid = (booking as any).paymentStatus === 'PAID';
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Header user={currentUser} />
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex flex-col items-center justify-center text-center">
-        {/* Large Celebratory Success Icon */}
+        {/* Success Icon */}
         <div className="w-20 h-20 rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-elevated mb-6 animate-pulse">
           <CheckCircle2 className="w-11 h-11 text-emerald-600" />
         </div>
@@ -124,10 +128,22 @@ export default function BookingConfirmedPage() {
               </span>
             </div>
 
-            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}>
-              <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
-              {statusInfo.label}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}>
+                <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
+                {statusInfo.label}
+              </span>
+
+              {isPaid ? (
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Payment Paid ✓
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                  Payment Unpaid
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -172,12 +188,28 @@ export default function BookingConfirmedPage() {
             </div>
           </div>
 
-          {booking.trackingNotes && (
-            <div className="flex items-center gap-2 p-3 rounded-2xl bg-teal-50 border border-teal-100 text-xs text-teal-800">
-              <Truck className="w-4 h-4 text-teal-600 flex-shrink-0" />
-              <span>{booking.trackingNotes}</span>
+          {/* Payment CTA Box */}
+          <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div>
+              <span className="font-bold text-slate-900 block">
+                {isPaid ? 'Payment Received & Verified' : 'Payment Status: Pending Payment'}
+              </span>
+              <p className="text-slate-600 text-[11px]">
+                {isPaid
+                  ? `Paid via ${(booking as any).paymentMethod} (Txn: ${(booking as any).transactionId})`
+                  : 'Complete payment via UPI, NEFT, or Corporate Card to issue official tax invoice.'}
+              </p>
             </div>
-          )}
+
+            {!isPaid && (
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                className="px-4 py-2 rounded-xl text-xs font-extrabold bg-teal-600 text-white hover:bg-teal-700 shadow-md whitespace-nowrap active:scale-95 transition-all"
+              >
+                Pay Now ({formatCurrency(booking.totalAmount)})
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Action Buttons */}
@@ -195,10 +227,22 @@ export default function BookingConfirmedPage() {
             className="flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 shadow-sm transition-all"
           >
             <FileCheck className="w-4 h-4" />
-            <span>View Rental Pass</span>
+            <span>View Rental Pass &amp; Invoice</span>
           </Link>
         </div>
       </main>
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <PaymentModal
+          booking={booking}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={(updated) => {
+            setBooking(updated);
+            setShowPaymentModal(false);
+          }}
+        />
+      )}
 
       <Footer />
       <MobileNav isProvider={currentUser?.role === 'PROVIDER'} />

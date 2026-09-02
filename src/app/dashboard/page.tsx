@@ -1,9 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+
 import { Header } from '@/components/common/Header';
 import { MobileNav } from '@/components/common/MobileNav';
 import { Footer } from '@/components/common/Footer';
@@ -26,8 +28,14 @@ import { Equipment, EquipmentCategory } from '@/types';
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
-  const isProvider = user?.role === 'PROVIDER';
-  const facilityName = user?.facility?.name || 'City Care Hospital';
+
+  // If not logged in, redirect to login page
+  if (!user) {
+    redirect('/login');
+  }
+
+  const isProvider = user.role === 'PROVIDER';
+  const facilityName = user.facility?.name || user.name;
 
   // Fetch categories with equipment counts
   const rawCategories = await prisma.equipmentCategory.findMany({
@@ -39,8 +47,9 @@ export default async function DashboardPage() {
     orderBy: { name: 'asc' },
   });
 
-  // Fetch nearby available equipment
+  // Fetch nearby available equipment for the marketplace
   const rawEquipment = await prisma.equipment.findMany({
+    where: { availability: 'AVAILABLE' },
     take: 6,
     orderBy: { distanceKm: 'asc' },
     include: {
@@ -49,18 +58,18 @@ export default async function DashboardPage() {
     },
   });
 
-  // Fetch user active requests count
+  // Fetch user active requests count strictly for THIS user
   const pendingRequestsCount = await prisma.equipmentRequest.count({
     where: {
-      requesterId: user?.id || 'usr_customer_demo',
+      requesterId: user.id,
       status: 'PENDING',
     },
   });
 
-  // Fetch active bookings count
+  // Fetch active bookings count strictly for THIS user
   const activeBookingsCount = await prisma.booking.count({
     where: {
-      requesterId: user?.id || 'usr_customer_demo',
+      requesterId: user.id,
     },
   });
 
@@ -81,7 +90,7 @@ export default async function DashboardPage() {
           <div className="relative z-10 max-w-2xl">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-600/60 backdrop-blur border border-teal-400/30 text-teal-100 mb-3">
               <Building2 className="w-3.5 h-3.5" />
-              <span>{user?.facility?.tier || 'Tier-3'} Healthcare Facility</span>
+              <span>{user.facility?.tier || 'Hospital'} • {user.facility?.type || 'Healthcare Facility'}</span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
@@ -145,7 +154,9 @@ export default async function DashboardPage() {
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">Track approvals</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {pendingRequestsCount > 0 ? `${pendingRequestsCount} pending approval` : 'Track approvals'}
+              </p>
             </div>
           </Link>
 

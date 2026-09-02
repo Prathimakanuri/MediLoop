@@ -110,6 +110,8 @@ export default function RequestEquipmentPage() {
           equipmentId,
           startDate,
           endDate,
+          totalDays: daysCount,
+          estimatedCost: estimatedTotal,
           purpose,
           urgency,
           message: message.trim(),

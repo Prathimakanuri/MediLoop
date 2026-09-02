@@ -80,7 +80,7 @@ export function EquipmentCard({ equipment }: EquipmentCardProps) {
           {/* Provider Hospital */}
           <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
             <span className="truncate font-medium text-slate-700">
-              {equipment.provider?.name || 'City Hospital'}
+              {equipment.provider?.name || 'Healthcare Facility'}
             </span>
             <span className="text-[11px] text-slate-400 whitespace-nowrap">
               {equipment.location.split(',')[0]}

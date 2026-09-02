@@ -8,38 +8,40 @@ datasource db {
 }
 
 model User {
-  id          String              @id @default(cuid())
-  name        String
-  email       String              @unique
-  password    String
-  role        String              @default("CUSTOMER") // CUSTOMER, PROVIDER, ADMIN
-  phone       String?
-  avatarUrl   String?
-  facilityId  String?
-  facility    HealthcareFacility? @relation(fields: [facilityId], references: [id])
-  requests    EquipmentRequest[]  @relation("UserRequests")
-  bookings    Booking[]           @relation("UserBookings")
+  id            String              @id @default(cuid())
+  name          String
+  email         String              @unique
+  password      String
+  role          String              @default("CUSTOMER") // CUSTOMER, PROVIDER, ADMIN
+  phone         String?
+  avatarUrl     String?
+  facilityId    String?
+  facility      HealthcareFacility? @relation(fields: [facilityId], references: [id])
+  requests      EquipmentRequest[]  @relation("UserRequests")
+  bookings      Booking[]           @relation("UserBookings")
+  payments      Payment[]           @relation("UserPayments")
   notifications Notification[]
-  createdAt   DateTime            @default(now())
+  createdAt     DateTime            @default(now())
 }
 
 model HealthcareFacility {
-  id           String             @id @default(cuid())
-  name         String
-  type         String             // Hospital, Trauma Center, Diagnostic Center, Specialty Clinic
-  tier         String             @default("Tier-2") // Tier-2, Tier-3, Semi-Urban, Rural
-  location     String             // City, State
-  address      String
-  verified     Boolean            @default(true)
-  contactPhone String
-  contactEmail String
-  rating       Float              @default(4.8)
-  bedCapacity  Int                @default(100)
-  users        User[]
-  equipment    Equipment[]
+  id               String             @id @default(cuid())
+  name             String
+  type             String             // Hospital, Trauma Center, Diagnostic Center, Specialty Clinic
+  tier             String             @default("Tier-2") // Tier-2, Tier-3, Semi-Urban, Rural
+  location         String             // City, State
+  address          String
+  verified         Boolean            @default(true)
+  contactPhone     String
+  contactEmail     String
+  rating           Float              @default(4.8)
+  bedCapacity      Int                @default(100)
+  users            User[]
+  equipment        Equipment[]
   incomingRequests EquipmentRequest[] @relation("ProviderFacilityRequests")
   providerBookings Booking[]          @relation("ProviderFacilityBookings")
-  createdAt    DateTime           @default(now())
+  providerPayments Payment[]          @relation("ProviderFacilityPayments")
+  createdAt        DateTime           @default(now())
 }
 
 model EquipmentCategory {
@@ -119,11 +121,33 @@ model Booking {
   pricePerDay     Int
   totalAmount     Int
   deposit         Int                @default(0)
-  status          String             @default("CONFIRMED") // CONFIRMED, ACTIVE, IN_TRANSIT, COMPLETED, CANCELLED
+  status          String             @default("AWAITING_PAYMENT") // PENDING, AWAITING_PAYMENT, CONFIRMED, ACTIVE, COMPLETED, CANCELLED, REJECTED
+  paymentStatus   String             @default("PAYMENT_REQUIRED") // NOT_AVAILABLE, PENDING, PAYMENT_REQUIRED, PROCESSING, PAID, FAILED, REFUNDED
+  paymentMethod   String?            // UPI, BANK_TRANSFER, CORPORATE_CARD, HEALTHCARE_CREDIT
+  transactionId   String?
+  paidAt          String?
   deliveryAddress String?
   trackingNotes   String?
   handoverDate    String?
+  payment         Payment?
   createdAt       DateTime           @default(now())
+}
+
+model Payment {
+  id            String             @id @default(cuid())
+  paymentId     String             @unique
+  bookingId     String             @unique
+  booking       Booking            @relation(fields: [bookingId], references: [id])
+  customerId    String
+  customer      User               @relation("UserPayments", fields: [customerId], references: [id])
+  providerId    String
+  provider      HealthcareFacility @relation("ProviderFacilityPayments", fields: [providerId], references: [id])
+  amount        Int
+  currency      String             @default("INR")
+  paymentStatus String             @default("PAID") // PAID, FAILED, REFUNDED
+  paymentMethod String             // UPI, BANK_TRANSFER, CORPORATE_CARD, HEALTHCARE_CREDIT
+  transactionId String
+  paymentDate   DateTime           @default(now())
 }
 
 model Notification {
@@ -132,7 +156,7 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id])
   title     String
   message   String
-  type      String   @default("INFO") // REQUEST_RECEIVED, REQUEST_ACCEPTED, REQUEST_REJECTED, BOOKING_CONFIRMED, SERVICE_REMINDER, INFO
+  type      String   @default("INFO") // REQUEST_RECEIVED, REQUEST_ACCEPTED, REQUEST_REJECTED, PAYMENT_REQUIRED, PAYMENT_CONFIRMED, PAYMENT_FAILED, BOOKING_CONFIRMED, SERVICE_REMINDER, INFO
   read      Boolean  @default(false)
   linkUrl   String?
   createdAt DateTime @default(now())

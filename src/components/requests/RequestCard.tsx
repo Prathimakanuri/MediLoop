@@ -2,8 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Calendar, Building2, Clock, CheckCircle2, XCircle, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
-import { EquipmentRequest } from '@/types';
+import { Calendar, Building2, Clock, CheckCircle2, XCircle, AlertCircle, ArrowRight, ShieldCheck, CreditCard } from 'lucide-react';
+import { EquipmentRequest, Booking } from '@/types';
 import { EquipmentImage } from '@/components/common/EquipmentImage';
 import { formatDate, formatCurrency, getStatusColor } from '@/lib/utils';
 
@@ -13,6 +13,7 @@ interface RequestCardProps {
   isProviderView?: boolean;
   onAccept?: (id: string) => void;
   onReject?: (id: string) => void;
+  onPayNow?: (booking: Booking) => void;
 }
 
 export function RequestCard({
@@ -21,6 +22,7 @@ export function RequestCard({
   isProviderView = false,
   onAccept,
   onReject,
+  onPayNow,
 }: RequestCardProps) {
   const statusInfo = getStatusColor(request.status);
   const isAccepted = request.status === 'ACCEPTED';
@@ -45,6 +47,12 @@ export function RequestCard({
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}>
               {statusInfo.label}
             </span>
+
+            {isAccepted && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 animate-pulse">
+                <Clock className="w-3 h-3 text-amber-700" /> Payment Required (Unpaid)
+              </span>
+            )}
 
             {request.urgency === 'CRITICAL_EMERGENCY' && (
               <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 animate-pulse">
@@ -72,7 +80,7 @@ export function RequestCard({
             <span className="font-semibold">
               {isProviderView
                 ? `Requester: ${request.requester?.facility?.name || request.requester?.name || 'Hospital'}`
-                : `Provider: ${request.provider?.name || 'City Hospital'}`}
+                : `Provider: ${request.provider?.name || 'Healthcare Facility'}`}
             </span>
           </div>
 
@@ -125,20 +133,30 @@ export function RequestCard({
                 onClick={() => onReject(request.id)}
                 className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-all"
               >
-                Reject
+                Decline
               </button>
             </>
           )}
 
           {/* Requester Side Actions */}
           {!isProviderView && isAccepted && (
-            <Link
-              href="/bookings"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition-all"
-            >
-              <span>View Confirmed Booking</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            onPayNow && request.booking ? (
+              <button
+                onClick={() => onPayNow(request.booking!)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-teal-600 text-white hover:bg-teal-700 shadow-md shadow-teal-600/20 active:scale-95 transition-all"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Pay Now ({formatCurrency(request.estimatedCost)})</span>
+              </button>
+            ) : (
+              <Link
+                href={request.booking ? `/bookings/${request.booking.id}` : "/bookings"}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-teal-600 text-white hover:bg-teal-700 shadow-md shadow-teal-600/20 active:scale-95 transition-all"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Pay Now ({formatCurrency(request.estimatedCost)})</span>
+              </Link>
+            )
           )}
 
           {!isProviderView && isPending && onCancel && (

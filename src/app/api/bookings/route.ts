@@ -10,39 +10,43 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const status = searchParams.get('status');
-    const view = searchParams.get('view'); // 'provider' or 'requester'
+    const view = searchParams.get('view');
 
-    const where: any = {};
-
-    if (view === 'provider' && user.facilityId) {
-      where.providerId = user.facilityId;
+    let bookings;
+    if (view === 'provider' || user.role === 'PROVIDER') {
+      bookings = await prisma.booking.findMany({
+        where: {
+          OR: [
+            { providerId: user.facilityId || '' },
+            { providerId: user.id },
+            { equipment: { providerId: user.facilityId || '' } },
+            { equipment: { provider: { users: { some: { id: user.id } } } } },
+          ],
+        },
+        include: {
+          equipment: { include: { category: true } },
+          requester: { include: { facility: true } },
+          provider: true,
+          payment: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
     } else {
-      where.requesterId = user.id;
+      bookings = await prisma.booking.findMany({
+        where: { requesterId: user.id },
+        include: {
+          equipment: { include: { category: true, provider: true } },
+          provider: true,
+          requester: { include: { facility: true } },
+          payment: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
     }
 
-    if (status && status !== 'ALL') {
-      where.status = status;
-    }
-
-    const bookings = await prisma.booking.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        equipment: {
-          include: { category: true, provider: true },
-        },
-        requester: {
-          include: { facility: true },
-        },
-        provider: true,
-        request: true,
-      },
-    });
-
-    return NextResponse.json({ bookings, count: bookings.length });
+    return NextResponse.json({ bookings });
   } catch (err: any) {
     console.error('Error fetching bookings:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 });
   }
 }

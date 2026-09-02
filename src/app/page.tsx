@@ -24,13 +24,13 @@ export default function SplashOnboardingPage() {
             href="/login"
             className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-teal-700 hover:bg-teal-50/80 transition-colors"
           >
-            Log In
+            Hospital Login
           </Link>
           <Link
-            href="/dashboard"
-            className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-teal-600 text-white hover:bg-teal-700 shadow-sm shadow-teal-600/20 transition-all"
+            href="/signup"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-teal-600 text-white hover:bg-teal-700 shadow-sm shadow-teal-600/20 transition-all active:scale-95"
           >
-            <span>Live Prototype</span>
+            <span>Register Hospital</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -76,18 +76,18 @@ export default function SplashOnboardingPage() {
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-4 justify-center lg:justify-start">
               <Link
-                href="/login"
-                className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-bold bg-teal-600 text-white hover:bg-teal-700 shadow-md shadow-teal-600/30 hover:shadow-lg transition-all active:scale-95"
+                href="/signup"
+                className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-extrabold bg-teal-600 text-white hover:bg-teal-700 shadow-md shadow-teal-600/30 hover:shadow-lg transition-all active:scale-95"
               >
-                <span>Get Started</span>
+                <span>Register Your Hospital</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
 
               <Link
-                href="/dashboard"
+                href="/login"
                 className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-bold bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm transition-all"
               >
-                <span>Browse Equipment Catalog</span>
+                <span>Log In</span>
               </Link>
             </div>
 
@@ -185,7 +185,7 @@ export default function SplashOnboardingPage() {
             </span>
             <span className="flex items-center gap-1.5 font-medium text-slate-700">
               <CheckCircle2 className="w-4 h-4 text-teal-600" />
-              3. Instant Confirmation
+              3. Instant Confirmation &amp; Payment
             </span>
           </div>
           <p>© {new Date().getFullYear()} MEDILOOP • Share. Connect. Save Lives.</p>

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
-import { calculateDays } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,40 +10,46 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const status = searchParams.get('status');
-    const view = searchParams.get('view'); // 'provider' or 'requester'
+    const view = searchParams.get('view'); // 'provider' or 'customer'
 
-    const where: any = {};
-
-    if (view === 'provider' && user.facilityId) {
-      where.providerId = user.facilityId;
+    let requests;
+    if (view === 'provider' || user.role === 'PROVIDER') {
+      // Find all requests for equipment owned by this provider / facility
+      requests = await prisma.equipmentRequest.findMany({
+        where: {
+          OR: [
+            { providerId: user.facilityId || '' },
+            { providerId: user.id },
+            { equipment: { providerId: user.facilityId || '' } },
+            { equipment: { provider: { users: { some: { id: user.id } } } } },
+          ],
+        },
+        include: {
+          equipment: { include: { category: true, provider: true } },
+          requester: { include: { facility: true } },
+          provider: true,
+          booking: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
     } else {
-      where.requesterId = user.id;
+      // Customer view: only their own requests
+      requests = await prisma.equipmentRequest.findMany({
+        where: { requesterId: user.id },
+        include: {
+          equipment: { include: { category: true, provider: true } },
+          provider: true,
+          requester: { include: { facility: true } },
+          booking: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
     }
 
-    if (status && status !== 'ALL') {
-      where.status = status;
-    }
-
-    const requests = await prisma.equipmentRequest.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        equipment: {
-          include: { category: true, provider: true },
-        },
-        requester: {
-          include: { facility: true },
-        },
-        provider: true,
-        booking: true,
-      },
-    });
-
-    return NextResponse.json({ requests, count: requests.length });
+    return NextResponse.json({ requests });
   } catch (err: any) {
-    console.error('Error querying requests:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('Error fetching requests:', err);
+    return NextResponse.json({ error: 'Failed to fetch requests' }, { status: 500 });
   }
 }
 
@@ -52,37 +57,14 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Please log in to submit a request' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized. Please sign in.' }, { status: 401 });
     }
 
     const body = await req.json();
-    const { equipmentId, startDate, endDate, purpose, urgency, message } = body;
+    const { equipmentId, startDate, endDate, totalDays, estimatedCost, purpose, urgency, message } = body;
 
-    if (!equipmentId || !startDate || !endDate || !purpose) {
-      return NextResponse.json(
-        { error: 'Equipment, start date, end date, and purpose are required.' },
-        { status: 400 }
-      );
-    }
-
-    // Validate dates
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (start < today) {
-      return NextResponse.json(
-        { error: 'Rental start date cannot be in the past.' },
-        { status: 400 }
-      );
-    }
-
-    if (end < start) {
-      return NextResponse.json(
-        { error: 'End date cannot be before the start date.' },
-        { status: 400 }
-      );
+    if (!equipmentId || !startDate || !endDate) {
+      return NextResponse.json({ error: 'Missing required request parameters' }, { status: 400 });
     }
 
     const equipment = await prisma.equipment.findUnique({
@@ -94,22 +76,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Equipment not found' }, { status: 404 });
     }
 
-    const totalDays = calculateDays(startDate, endDate);
-    const estimatedCost = totalDays * equipment.pricePerDay;
+    // Safely calculate total rental days and ensure it's a valid positive integer (never NaN)
+    let days = Number(totalDays);
+    if (isNaN(days) || days <= 0) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const diffTime = end.getTime() - start.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      days = diffDays > 0 ? diffDays : 1;
+    }
 
-    // Create the EquipmentRequest record in database
-    const newRequest = await prisma.equipmentRequest.create({
+    // Safely calculate estimated cost (never NaN)
+    let cost = Number(estimatedCost);
+    if (isNaN(cost) || cost <= 0) {
+      cost = days * (equipment.pricePerDay || 1000);
+    }
+
+    // 1. Create the EquipmentRequest with PENDING status (DOES NOT create confirmed booking)
+    const request = await prisma.equipmentRequest.create({
       data: {
-        equipmentId,
-        requesterId: user.id,
-        providerId: equipment.providerId,
+        equipment: { connect: { id: equipment.id } },
+        requester: { connect: { id: user.id } },
+        provider: { connect: { id: equipment.providerId } },
         startDate,
         endDate,
-        totalDays,
-        estimatedCost,
-        purpose,
+        totalDays: Math.round(days),
+        estimatedCost: Math.round(cost),
+        purpose: purpose || 'ICU Support',
         urgency: urgency || 'STANDARD',
-        message: message || null,
+        message: message || '',
         status: 'PENDING',
       },
       include: {
@@ -119,35 +114,36 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Create notification for Requester
-    await prisma.notification.create({
-      data: {
-        userId: user.id,
-        title: `Request Sent: ${equipment.name}`,
-        message: `Your rental request for ${equipment.name} has been submitted to ${equipment.provider.name}.`,
-        type: 'REQUEST_RECEIVED',
-        linkUrl: '/requests',
+    // 2. Dispatch Notification strictly to the equipment provider user(s)
+    const providerUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { facilityId: equipment.providerId },
+          { id: equipment.providerId },
+          { facility: { equipment: { some: { id: equipment.id } } } },
+        ],
       },
     });
 
-    // Create notification for Provider Facility Owner(s)
-    if (equipment.provider.users && equipment.provider.users.length > 0) {
-      for (const pUser of equipment.provider.users) {
-        await prisma.notification.create({
-          data: {
-            userId: pUser.id,
-            title: `New Request: ${equipment.name}`,
-            message: `${user.facility?.name || user.name} requested ${equipment.name} for ${totalDays} days (${purpose}).`,
-            type: 'REQUEST_RECEIVED',
-            linkUrl: '/provider',
-          },
-        });
-      }
+    for (const pUser of providerUsers) {
+      await prisma.notification.create({
+        data: {
+          userId: pUser.id,
+          title: `New Equipment Request: ${equipment.name}`,
+          message: `${user.name} (${user.facility?.name || 'Customer'}) requested ${equipment.name} for ${request.totalDays} days (${startDate} to ${endDate}).`,
+          type: 'REQUEST_RECEIVED',
+          linkUrl: `/requests`,
+        },
+      });
     }
 
-    return NextResponse.json({ success: true, request: newRequest });
+    return NextResponse.json({
+      success: true,
+      request,
+      message: 'Request submitted successfully! The provider has been notified and will review your request.',
+    });
   } catch (err: any) {
     console.error('Error creating request:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Failed to submit request' }, { status: 500 });
   }
 }

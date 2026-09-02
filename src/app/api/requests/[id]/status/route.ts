@@ -12,19 +12,14 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { action } = await req.json(); // 'ACCEPT' or 'REJECT' or 'CANCEL'
-
-    if (!action || !['ACCEPT', 'REJECT', 'CANCEL'].includes(action)) {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    }
+    const { action } = await req.json(); // 'ACCEPT' | 'REJECT' | 'CANCEL'
 
     const request = await prisma.equipmentRequest.findUnique({
       where: { id: params.id },
       include: {
         equipment: true,
-        requester: { include: { facility: true } },
         provider: true,
-        booking: true,
+        requester: { include: { facility: true } },
       },
     });
 
@@ -32,51 +27,46 @@ export async function POST(
       return NextResponse.json({ error: 'Request not found' }, { status: 404 });
     }
 
-    if (action === 'CANCEL') {
-      const updated = await prisma.equipmentRequest.update({
-        where: { id: params.id },
-        data: { status: 'CANCELLED' },
-      });
-      return NextResponse.json({ success: true, request: updated });
-    }
-
     if (action === 'REJECT') {
-      const updated = await prisma.equipmentRequest.update({
+      const updatedRequest = await prisma.equipmentRequest.update({
         where: { id: params.id },
         data: { status: 'REJECTED' },
       });
 
-      // Send rejection notification to requester
+      // Notify Customer of Rejection
       await prisma.notification.create({
         data: {
           userId: request.requesterId,
           title: `Request Declined: ${request.equipment.name}`,
-          message: `${request.provider.name} was unable to fulfill your rental request for ${request.equipment.name}.`,
+          message: `Your equipment request for ${request.equipment.name} was declined by ${request.provider.name}.`,
           type: 'REQUEST_REJECTED',
-          linkUrl: '/requests',
+          linkUrl: `/requests`,
         },
       });
 
-      return NextResponse.json({ success: true, request: updated });
+      return NextResponse.json({
+        success: true,
+        request: updatedRequest,
+        message: 'Request declined. Requester has been notified.',
+      });
     }
 
     if (action === 'ACCEPT') {
-      // 1. Update request status
       const updatedRequest = await prisma.equipmentRequest.update({
         where: { id: params.id },
         data: { status: 'ACCEPTED' },
       });
 
-      // 2. Generate unique booking number
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-      const bookingNumber = `ML-2026-${randomSuffix}`;
+      // Check if booking already exists or create new AWAITING_PAYMENT booking
+      let booking = await prisma.booking.findUnique({
+        where: { requestId: request.id },
+      });
 
-      // 3. Create or find confirmed booking
-      let booking = request.booking;
       if (!booking) {
+        const bookingNum = `ML-2026-${Math.floor(1000 + Math.random() * 9000)}`;
         booking = await prisma.booking.create({
           data: {
-            bookingNumber,
+            bookingNumber: bookingNum,
             requestId: request.id,
             equipmentId: request.equipmentId,
             requesterId: request.requesterId,
@@ -87,33 +77,28 @@ export async function POST(
             pricePerDay: request.equipment.pricePerDay,
             totalAmount: request.estimatedCost,
             deposit: request.equipment.depositAmount,
-            status: 'CONFIRMED',
-            deliveryAddress: request.requester.facility?.address || 'Civil Lines, Near Hospital Square',
-            trackingNotes: 'Dispatched via Mediloop Verified Healthcare Logistics. Expected handover in 2-4 hours.',
-            handoverDate: request.startDate,
+            status: 'AWAITING_PAYMENT',
+            paymentStatus: 'PAYMENT_REQUIRED',
+          },
+        });
+      } else {
+        booking = await prisma.booking.update({
+          where: { id: booking.id },
+          data: {
+            status: 'AWAITING_PAYMENT',
+            paymentStatus: 'PAYMENT_REQUIRED',
           },
         });
       }
 
-      // 4. Create Notification for Requester
+      // Notify Customer: Request accepted & Payment Required
       await prisma.notification.create({
         data: {
           userId: request.requesterId,
-          title: `Booking Confirmed: ${request.equipment.name}`,
-          message: `Great news! ${request.provider.name} accepted your request. Booking #${booking.bookingNumber} is confirmed.`,
-          type: 'BOOKING_CONFIRMED',
+          title: `Request Accepted — Payment Required`,
+          message: `Your request for ${request.equipment.name} has been accepted by ${request.provider.name}. Payment of ₹${request.estimatedCost.toLocaleString('en-IN')} is required to confirm your booking.`,
+          type: 'PAYMENT_REQUIRED',
           linkUrl: `/bookings/${booking.id}`,
-        },
-      });
-
-      // 5. Create Notification for Provider
-      await prisma.notification.create({
-        data: {
-          userId: user.id,
-          title: `Rental Request Accepted`,
-          message: `You confirmed booking #${booking.bookingNumber} for ${request.equipment.name}.`,
-          type: 'BOOKING_CONFIRMED',
-          linkUrl: `/provider`,
         },
       });
 
@@ -121,12 +106,22 @@ export async function POST(
         success: true,
         request: updatedRequest,
         booking,
+        message: 'Request accepted! Booking is now awaiting customer payment.',
       });
     }
 
-    return NextResponse.json({ error: 'Unhandled action' }, { status: 400 });
+    if (action === 'CANCEL') {
+      const updatedRequest = await prisma.equipmentRequest.update({
+        where: { id: params.id },
+        data: { status: 'CANCELLED' },
+      });
+
+      return NextResponse.json({ success: true, request: updatedRequest });
+    }
+
+    return NextResponse.json({ error: 'Invalid status action' }, { status: 400 });
   } catch (err: any) {
     console.error('Error updating request status:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Failed to update request status' }, { status: 500 });
   }
 }

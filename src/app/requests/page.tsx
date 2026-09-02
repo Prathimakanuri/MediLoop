@@ -2,35 +2,45 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Header } from '@/components/common/Header';
 import { MobileNav } from '@/components/common/MobileNav';
 import { Footer } from '@/components/common/Footer';
 import { RequestCard } from '@/components/requests/RequestCard';
-import { EquipmentRequest, User } from '@/types';
-import { FileText, Bell, Search, RotateCcw, AlertCircle, ArrowRight } from 'lucide-react';
+import { PaymentModal } from '@/components/bookings/PaymentModal';
+import { EquipmentRequest, Booking, User } from '@/types';
+import { FileText, PlusCircle, Search, Clock, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
 
-export default function MyRequestsPage() {
+export default function RequestsPage() {
+  const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [requests, setRequests] = useState<EquipmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'ACCEPTED' | 'REJECTED'>('ALL');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [selectedBookingForPayment, setSelectedBookingForPayment] = useState<Booking | null>(null);
 
-  const fetchRequests = async () => {
+  const loadRequests = async () => {
     setLoading(true);
     try {
-      const [userRes, reqRes] = await Promise.all([
-        fetch('/api/auth/me'),
-        fetch('/api/requests'),
-      ]);
-
-      if (userRes.ok) {
-        const uData = await userRes.json();
-        setCurrentUser(uData.user);
+      const uRes = await fetch('/api/auth/me');
+      if (!uRes.ok) {
+        router.push('/login');
+        return;
       }
+      const uData = await uRes.json();
+      if (!uData.user) {
+        router.push('/login');
+        return;
+      }
+      setCurrentUser(uData.user);
+
+      const isProvider = uData.user.role === 'PROVIDER';
+      const reqRes = await fetch(isProvider ? '/api/requests?view=provider' : '/api/requests');
 
       if (reqRes.ok) {
-        const rData = await reqRes.json();
-        setRequests(rData.requests || []);
+        const reqData = await reqRes.json();
+        setRequests(reqData.requests || []);
       }
     } catch (err) {
       console.error(err);
@@ -40,11 +50,11 @@ export default function MyRequestsPage() {
   };
 
   useEffect(() => {
-    fetchRequests();
+    loadRequests();
   }, []);
 
   const handleCancelRequest = async (id: string) => {
-    if (!confirm('Are you sure you want to cancel this equipment request?')) return;
+    if (!confirm('Are you sure you want to cancel this request?')) return;
     try {
       const res = await fetch(`/api/requests/${id}/status`, {
         method: 'POST',
@@ -52,141 +62,208 @@ export default function MyRequestsPage() {
         body: JSON.stringify({ action: 'CANCEL' }),
       });
       if (res.ok) {
-        fetchRequests();
+        loadRequests();
       }
     } catch (err) {
       console.error(err);
     }
   };
 
-  const filteredRequests = requests.filter((r) => {
-    if (activeTab === 'ALL') return true;
-    return r.status === activeTab;
-  });
-
-  const countForTab = (tab: string) => {
-    if (tab === 'ALL') return requests.length;
-    return requests.filter((r) => r.status === tab).length;
+  const handleAcceptRequest = async (id: string) => {
+    setActionLoading(id);
+    try {
+      const res = await fetch(`/api/requests/${id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'ACCEPT' }),
+      });
+      if (res.ok) {
+        await loadRequests();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(null);
+    }
   };
+
+  const handleRejectRequest = async (id: string) => {
+    if (!confirm('Are you sure you want to decline this equipment request?')) return;
+    setActionLoading(id);
+    try {
+      const res = await fetch(`/api/requests/${id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'REJECT' }),
+      });
+      if (res.ok) {
+        await loadRequests();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const isProvider = currentUser?.role === 'PROVIDER';
+
+  const filteredRequests = requests.filter((r) => {
+    if (activeTab === 'PENDING') return r.status === 'PENDING';
+    if (activeTab === 'ACCEPTED') return r.status === 'ACCEPTED';
+    if (activeTab === 'REJECTED') return r.status === 'REJECTED';
+    return true;
+  });
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Header user={currentUser} />
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
-        {/* Page Title */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              My Equipment Requests
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 mb-2">
+              <FileText className="w-3.5 h-3.5" />
+              <span>{isProvider ? 'Incoming Rental Requests' : 'Hospital Equipment Requests'}</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              {isProvider ? 'Booking Requests' : 'My Equipment Requests'}
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Track real-time approval status from provider hospitals
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              {isProvider
+                ? 'Review customer rental requests and accept or decline equipment allocations'
+                : 'Track submitted equipment requests. Once a provider accepts, click Pay Now to start online payment.'}
             </p>
           </div>
 
-          <Link
-            href="/search"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-teal-600 text-white hover:bg-teal-700 shadow-sm transition-all self-start sm:self-auto"
-          >
-            <Search className="w-3.5 h-3.5" />
-            <span>Request New Equipment</span>
-          </Link>
-        </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={loadRequests}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-sm"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Refresh</span>
+            </button>
 
-        {/* Live Notification Alert Strip */}
-        <div className="p-4 rounded-2xl bg-teal-50 border border-teal-200/80 flex items-center justify-between gap-3 text-xs text-teal-900">
-          <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-teal-600 flex-shrink-0 animate-pulse" />
-            <span>
-              <strong>Real-Time Updates:</strong> We will automatically notify you via the notification bell once the provider hospital accepts or responds.
-            </span>
-          </div>
-          <button onClick={fetchRequests} className="text-teal-700 hover:text-teal-900 font-bold flex items-center gap-1 flex-shrink-0">
-            <RotateCcw className="w-3.5 h-3.5" />
-            Refresh
-          </button>
-        </div>
-
-        {/* Tabs Bar */}
-        <div className="flex border-b border-slate-200 gap-2 overflow-x-auto no-scrollbar">
-          {[
-            { id: 'ALL', label: 'All Requests' },
-            { id: 'PENDING', label: 'Pending Review' },
-            { id: 'ACCEPTED', label: 'Accepted & Confirmed' },
-            { id: 'REJECTED', label: 'Declined' },
-          ].map((tab) => {
-            const count = countForTab(tab.id);
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${
-                  isActive
-                    ? 'border-teal-600 text-teal-700'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
+            {!isProvider && (
+              <Link
+                href="/search"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-teal-600 text-white hover:bg-teal-700 shadow-sm"
               >
-                <span>{tab.label}</span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                    isActive ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+                <Search className="w-3.5 h-3.5" />
+                <span>Search Equipment</span>
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+          <button
+            onClick={() => setActiveTab('ALL')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'ALL'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            All Requests ({requests.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab('PENDING')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === 'PENDING'
+                ? 'bg-amber-500 text-white shadow-sm'
+                : 'bg-white text-amber-800 hover:bg-amber-50 border border-amber-200'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>Pending ({requests.filter(r => r.status === 'PENDING').length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('ACCEPTED')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === 'ACCEPTED'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-white text-emerald-800 hover:bg-emerald-50 border border-emerald-200'
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Accepted ({requests.filter(r => r.status === 'ACCEPTED').length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('REJECTED')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === 'REJECTED'
+                ? 'bg-rose-600 text-white shadow-sm'
+                : 'bg-white text-rose-800 hover:bg-rose-50 border border-rose-200'
+            }`}
+          >
+            <XCircle className="w-3.5 h-3.5" />
+            <span>Declined ({requests.filter(r => r.status === 'REJECTED').length})</span>
+          </button>
         </div>
 
         {/* Requests List */}
         {loading ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-slate-200 p-5 animate-pulse flex gap-4">
-                <div className="w-32 h-24 bg-slate-200 rounded-xl" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-slate-200 rounded w-1/4" />
-                  <div className="h-5 bg-slate-200 rounded w-1/2" />
-                  <div className="h-4 bg-slate-100 rounded w-1/3" />
-                </div>
-              </div>
-            ))}
+          <div className="p-12 text-center text-xs text-slate-400 animate-pulse bg-white rounded-3xl border border-slate-200">
+            Loading requests...
           </div>
         ) : filteredRequests.length === 0 ? (
-          <div className="text-center py-16 px-4 bg-white rounded-3xl border border-slate-200/80 shadow-soft max-w-md mx-auto">
-            <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto mb-3">
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 p-6 space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-2">
               <FileText className="w-7 h-7" />
             </div>
-            <h3 className="text-base font-bold text-slate-800">No {activeTab.toLowerCase()} requests found</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              You haven&apos;t submitted any requests in this status category.
+            <h3 className="text-base font-bold text-slate-800">No requests found</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              {isProvider
+                ? 'When customer hospitals submit rental requests for your equipment, they will appear here.'
+                : 'Search available equipment in the marketplace and submit a rental request to get started.'}
             </p>
-            <Link
-              href="/search"
-              className="mt-5 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-teal-600 text-white hover:bg-teal-700 shadow-sm"
-            >
-              <Search className="w-3.5 h-3.5" />
-              Browse Medical Equipment
-            </Link>
+            {!isProvider && (
+              <Link
+                href="/search"
+                className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-teal-600 text-white hover:bg-teal-700 shadow-md"
+              >
+                Search Available Equipment
+              </Link>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredRequests.map((req) => (
+            {filteredRequests.map((r) => (
               <RequestCard
-                key={req.id}
-                request={req}
+                key={r.id}
+                request={r}
+                isProviderView={isProvider}
                 onCancel={handleCancelRequest}
+                onAccept={handleAcceptRequest}
+                onReject={handleRejectRequest}
+                onPayNow={(booking) => setSelectedBookingForPayment(booking)}
               />
             ))}
           </div>
         )}
       </main>
 
+      {/* Online Payment Checkout Modal */}
+      {selectedBookingForPayment && (
+        <PaymentModal
+          booking={selectedBookingForPayment}
+          onClose={() => setSelectedBookingForPayment(null)}
+          onSuccess={() => {
+            setSelectedBookingForPayment(null);
+            loadRequests();
+          }}
+        />
+      )}
+
       <Footer />
-      <MobileNav isProvider={currentUser?.role === 'PROVIDER'} />
+      <MobileNav isProvider={isProvider} />
     </div>
   );
 }

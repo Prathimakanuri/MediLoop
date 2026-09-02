@@ -43,13 +43,21 @@ export function getStatusColor(status: string): { bg: string; text: string; bord
     case 'MAINTENANCE':
       return { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200', label: 'Under Maintenance' };
     case 'PENDING':
-      return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', label: 'Pending Review' };
+      return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', label: 'Pending Approval' };
     case 'ACCEPTED':
+      return { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', label: 'Request Accepted' };
+    case 'AWAITING_PAYMENT':
+    case 'PAYMENT_REQUIRED':
+      return { bg: 'bg-amber-100', text: 'text-amber-900', border: 'border-amber-300', label: 'Payment Required' };
+    case 'PAID':
     case 'CONFIRMED':
-      return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', label: 'Confirmed / Accepted' };
+      return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', label: 'Confirmed / Paid' };
+    case 'FAILED':
+      return { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', label: 'Payment Failed' };
     case 'REJECTED':
+      return { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', label: 'Request Rejected' };
     case 'CANCELLED':
-      return { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', label: 'Rejected' };
+      return { bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-200', label: 'Cancelled' };
     case 'ACTIVE':
     case 'IN_TRANSIT':
       return { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', label: 'Active Rental' };

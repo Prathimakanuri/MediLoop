@@ -8,10 +8,12 @@ export async function getCurrentUser() {
     const cookieStore = cookies();
     const sessionEmail = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
-    const email = sessionEmail || 'demo@mediloop.com'; // Default to demo customer
+    if (!sessionEmail) {
+      return null;
+    }
 
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: sessionEmail.toLowerCase().trim() },
       include: {
         facility: true,
       },
@@ -26,7 +28,7 @@ export async function getCurrentUser() {
 
 export async function setSessionUser(email: string) {
   const cookieStore = cookies();
-  cookieStore.set(AUTH_COOKIE_NAME, email, {
+  cookieStore.set(AUTH_COOKIE_NAME, email.toLowerCase().trim(), {
     path: '/',
     maxAge: 60 * 60 * 24 * 30, // 30 days
     httpOnly: false, // allow client-side sync

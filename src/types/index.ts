@@ -82,6 +82,20 @@ export interface EquipmentRequest {
   updatedAt: string;
 }
 
+export interface Payment {
+  id: string;
+  paymentId: string;
+  bookingId: string;
+  customerId: string;
+  providerId: string;
+  amount: number;
+  currency: string;
+  paymentStatus: 'PAID' | 'FAILED' | 'REFUNDED';
+  paymentMethod: string;
+  transactionId: string;
+  paymentDate: string;
+}
+
 export interface Booking {
   id: string;
   bookingNumber: string;
@@ -99,7 +113,12 @@ export interface Booking {
   pricePerDay: number;
   totalAmount: number;
   deposit: number;
-  status: 'CONFIRMED' | 'ACTIVE' | 'IN_TRANSIT' | 'COMPLETED' | 'CANCELLED';
+  status: 'PENDING' | 'AWAITING_PAYMENT' | 'CONFIRMED' | 'ACTIVE' | 'IN_TRANSIT' | 'COMPLETED' | 'CANCELLED' | 'REJECTED';
+  paymentStatus: 'NOT_AVAILABLE' | 'PENDING' | 'PAYMENT_REQUIRED' | 'PROCESSING' | 'PAID' | 'FAILED' | 'REFUNDED';
+  paymentMethod?: string | null;
+  transactionId?: string | null;
+  paidAt?: string | null;
+  payment?: Payment | null;
   deliveryAddress?: string | null;
   trackingNotes?: string | null;
   handoverDate?: string | null;
