@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id          String              @id @default(cuid())
+  name        String
+  email       String              @unique
+  password    String
+  role        String              @default("CUSTOMER") // CUSTOMER, PROVIDER, ADMIN
+  phone       String?
+  avatarUrl   String?
+  facilityId  String?
+  facility    HealthcareFacility? @relation(fields: [facilityId], references: [id])
+  requests    EquipmentRequest[]  @relation("UserRequests")
+  bookings    Booking[]           @relation("UserBookings")
+  notifications Notification[]
+  createdAt   DateTime            @default(now())
+}
+
+model HealthcareFacility {
+  id           String             @id @default(cuid())
+  name         String
+  type         String             // Hospital, Trauma Center, Diagnostic Center, Specialty Clinic
+  tier         String             @default("Tier-2") // Tier-2, Tier-3, Semi-Urban, Rural
+  location     String             // City, State
+  address      String
+  verified     Boolean            @default(true)
+  contactPhone String
+  contactEmail String
+  rating       Float              @default(4.8)
+  bedCapacity  Int                @default(100)
+  users        User[]
+  equipment    Equipment[]
+  incomingRequests EquipmentRequest[] @relation("ProviderFacilityRequests")
+  providerBookings Booking[]          @relation("ProviderFacilityBookings")
+  createdAt    DateTime           @default(now())
+}
+
+model EquipmentCategory {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  slug        String      @unique
+  iconName    String
+  description String
+  equipment   Equipment[]
+}
+
+model Equipment {
+  id                String             @id @default(cuid())
+  name              String
+  model             String
+  categoryId        String
+  category          EquipmentCategory  @relation(fields: [categoryId], references: [id])
+  providerId        String
+  provider          HealthcareFacility @relation(fields: [providerId], references: [id])
+  imageUrl          String
+  gallery           String             @default("[]") // JSON string of images
+  description       String
+  pricePerDay       Int
+  depositAmount     Int                @default(0)
+  location          String
+  distanceKm        Float              @default(2.0)
+  condition         String             @default("Excellent") // Excellent, Like New, Good
+  yearOfManufacture Int                @default(2022)
+  availability      String             @default("AVAILABLE") // AVAILABLE, IN_USE, MAINTENANCE
+  verified          Boolean            @default(true)
+  lastServiceDate   String             @default("15 Jan 2026")
+  nextServiceDue    String             @default("15 Jul 2026")
+  usageType         String             @default("ICU Support") // ICU Support, Emergency Care, Diagnostic, Ward, Surgical
+  accessories       String             @default("[]") // JSON string of accessory strings
+  deliveryAvailable Boolean            @default(true)
+  powerRequirements String             @default("220V AC, Battery Backup 4h")
+  requests          EquipmentRequest[]
+  bookings          Booking[]
+  createdAt         DateTime           @default(now())
+}
+
+model EquipmentRequest {
+  id            String             @id @default(cuid())
+  equipmentId   String
+  equipment     Equipment          @relation(fields: [equipmentId], references: [id])
+  requesterId   String
+  requester     User               @relation("UserRequests", fields: [requesterId], references: [id])
+  providerId    String
+  provider      HealthcareFacility @relation("ProviderFacilityRequests", fields: [providerId], references: [id])
+  startDate     String
+  endDate       String
+  totalDays     Int                @default(1)
+  estimatedCost Int                @default(0)
+  purpose       String             // ICU Support, Emergency Care, Patient Surge, Equipment Breakdown, Temporary Requirement, Other
+  urgency       String             @default("STANDARD") // CRITICAL_EMERGENCY, HIGH, STANDARD
+  message       String?
+  status        String             @default("PENDING") // PENDING, ACCEPTED, REJECTED, CANCELLED
+  booking       Booking?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model Booking {
+  id              String             @id @default(cuid())
+  bookingNumber   String             @unique
+  requestId       String             @unique
+  request         EquipmentRequest   @relation(fields: [requestId], references: [id])
+  equipmentId     String
+  equipment       Equipment          @relation(fields: [equipmentId], references: [id])
+  requesterId     String
+  requester       User               @relation("UserBookings", fields: [requesterId], references: [id])
+  providerId      String
+  provider        HealthcareFacility @relation("ProviderFacilityBookings", fields: [providerId], references: [id])
+  startDate       String
+  endDate         String
+  totalDays       Int
+  pricePerDay     Int
+  totalAmount     Int
+  deposit         Int                @default(0)
+  status          String             @default("CONFIRMED") // CONFIRMED, ACTIVE, IN_TRANSIT, COMPLETED, CANCELLED
+  deliveryAddress String?
+  trackingNotes   String?
+  handoverDate    String?
+  createdAt       DateTime           @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      String   @default("INFO") // REQUEST_RECEIVED, REQUEST_ACCEPTED, REQUEST_REJECTED, BOOKING_CONFIRMED, SERVICE_REMINDER, INFO
+  read      Boolean  @default(false)
+  linkUrl   String?
+  createdAt DateTime @default(now())
+}

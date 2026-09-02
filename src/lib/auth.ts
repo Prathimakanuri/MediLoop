@@ -1,0 +1,40 @@
+import { cookies } from 'next/headers';
+import { prisma } from './prisma';
+
+export const AUTH_COOKIE_NAME = 'mediloop_session_user';
+
+export async function getCurrentUser() {
+  try {
+    const cookieStore = cookies();
+    const sessionEmail = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+
+    const email = sessionEmail || 'demo@mediloop.com'; // Default to demo customer
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        facility: true,
+      },
+    });
+
+    return user;
+  } catch (err) {
+    console.error('Error fetching current user:', err);
+    return null;
+  }
+}
+
+export async function setSessionUser(email: string) {
+  const cookieStore = cookies();
+  cookieStore.set(AUTH_COOKIE_NAME, email, {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+    httpOnly: false, // allow client-side sync
+    sameSite: 'lax',
+  });
+}
+
+export async function clearSessionUser() {
+  const cookieStore = cookies();
+  cookieStore.delete(AUTH_COOKIE_NAME);
+}

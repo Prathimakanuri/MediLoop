@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0fdf4"/>
+      <stop offset="100%" stop-color="#e0f2fe"/>
+    </linearGradient>
+    <linearGradient id="monitorBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <linearGradient id="screenGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#0f766e" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect width="800" height="600" fill="url(#bgGrad)"/>
+  
+  <!-- Bedside Mounting Arm / Stand -->
+  <g filter="url(#dropShadow)">
+    <rect x="375" y="420" width="50" height="130" rx="8" fill="#64748b"/>
+    <ellipse cx="400" cy="550" rx="120" ry="18" fill="#334155" opacity="0.4"/>
+    <rect x="330" y="535" width="140" height="20" rx="6" fill="#475569"/>
+  </g>
+
+  <!-- Patient Monitor Main Frame -->
+  <g filter="url(#dropShadow)">
+    <rect x="180" y="100" width="440" height="320" rx="24" fill="url(#monitorBody)" stroke="#cbd5e1" stroke-width="4"/>
+    
+    <!-- Top Alert Light Bar -->
+    <rect x="320" y="112" width="160" height="12" rx="6" fill="#10b981"/>
+    
+    <!-- Large Clinical Display -->
+    <rect x="205" y="135" width="390" height="235" rx="14" fill="url(#screenGrad)" stroke="#1e293b" stroke-width="2"/>
+    
+    <!-- Waveforms -->
+    <!-- ECG Lead II (Green) -->
+    <path d="M 215 170 L 260 170 L 265 155 L 270 190 L 275 145 L 280 180 L 285 170 L 370 170 L 375 155 L 380 190 L 385 145 L 390 180 L 395 170 L 460 170" fill="none" stroke="#22c55e" stroke-width="2.5"/>
+    <text x="220" y="155" font-family="sans-serif" font-size="12" fill="#22c55e" font-weight="bold">ECG II</text>
+    
+    <!-- SpO2 Pleth (Cyan) -->
+    <path d="M 215 220 Q 230 195 245 220 T 275 220 Q 290 195 305 220 T 335 220 Q 350 195 365 220 T 395 220 Q 410 195 425 220 T 460 220" fill="none" stroke="#06b6d4" stroke-width="2.5"/>
+    <text x="220" y="208" font-family="sans-serif" font-size="12" fill="#06b6d4" font-weight="bold">SpO2</text>
+
+    <!-- Respiration (Yellow) -->
+    <path d="M 215 270 Q 240 250 265 270 T 315 270 Q 340 250 365 270 T 415 270 Q 440 250 460 270" fill="none" stroke="#eab308" stroke-width="2.2"/>
+    <text x="220" y="258" font-family="sans-serif" font-size="12" fill="#eab308" font-weight="bold">RESP</text>
+
+    <!-- NIBP Blood Pressure (Orange) -->
+    <path d="M 215 315 L 460 315" fill="none" stroke="#f97316" stroke-width="1.5" stroke-dasharray="4 4"/>
+    <text x="220" y="308" font-family="sans-serif" font-size="12" fill="#f97316" font-weight="bold">NIBP (mmHg)</text>
+
+    <!-- Right Side Vital Stats Column -->
+    <rect x="475" y="145" width="110" height="52" rx="8" fill="#14532d" opacity="0.6"/>
+    <text x="485" y="162" font-family="sans-serif" font-size="11" fill="#86efac" font-weight="bold">HEART RATE</text>
+    <text x="530" y="190" font-family="sans-serif" font-size="28" fill="#22c55e" font-weight="900" text-anchor="middle">72</text>
+    <text x="575" y="190" font-family="sans-serif" font-size="11" fill="#86efac">bpm</text>
+
+    <rect x="475" y="202" width="110" height="52" rx="8" fill="#164e63" opacity="0.6"/>
+    <text x="485" y="219" font-family="sans-serif" font-size="11" fill="#67e8f9" font-weight="bold">SpO2 %</text>
+    <text x="530" y="247" font-family="sans-serif" font-size="28" fill="#06b6d4" font-weight="900" text-anchor="middle">98</text>
+    <text x="575" y="247" font-family="sans-serif" font-size="11" fill="#67e8f9">%</text>
+
+    <rect x="475" y="259" width="110" height="52" rx="8" fill="#7c2d12" opacity="0.6"/>
+    <text x="485" y="276" font-family="sans-serif" font-size="11" fill="#fdba74" font-weight="bold">SYS / DIA</text>
+    <text x="530" y="303" font-family="sans-serif" font-size="20" fill="#fb923c" font-weight="900" text-anchor="middle">120/80</text>
+
+    <rect x="475" y="315" width="110" height="46" rx="8" fill="#713f12" opacity="0.6"/>
+    <text x="485" y="330" font-family="sans-serif" font-size="10" fill="#fde047" font-weight="bold">TEMP / RESP</text>
+    <text x="530" y="352" font-family="sans-serif" font-size="18" fill="#facc15" font-weight="900" text-anchor="middle">36.8°C / 18</text>
+
+    <!-- Bottom Interface Controls -->
+    <rect x="220" y="380" width="80" height="26" rx="6" fill="#0d9488"/>
+    <text x="260" y="397" font-family="sans-serif" font-size="11" fill="#ffffff" font-weight="bold" text-anchor="middle">NIBP START</text>
+
+    <rect x="310" y="380" width="70" height="26" rx="6" fill="#475569"/>
+    <text x="345" y="397" font-family="sans-serif" font-size="11" fill="#ffffff" font-weight="bold" text-anchor="middle">SILENCE</text>
+
+    <circle cx="560" cy="393" r="14" fill="#0284c7"/>
+    <circle cx="560" cy="393" r="7" fill="#f8fafc"/>
+  </g>
+
+  <!-- Title Badge -->
+  <rect x="260" y="35" width="280" height="34" rx="17" fill="#0d9488"/>
+  <text x="400" y="57" font-family="sans-serif" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle">MULTI-PARAMETER PATIENT MONITOR</text>
+</svg>

@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0fdf4"/>
+      <stop offset="100%" stop-color="#eff6ff"/>
+    </linearGradient>
+    <linearGradient id="pumpBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#059669" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <rect width="800" height="600" fill="url(#bgGrad)"/>
+  
+  <!-- IV Pole Mount Column -->
+  <rect x="385" y="60" width="30" height="520" rx="4" fill="#64748b"/>
+  <rect x="340" y="550" width="120" height="30" rx="8" fill="#334155"/>
+  
+  <!-- Infusion Pump 1 (Top Unit) -->
+  <g filter="url(#dropShadow)">
+    <rect x="230" y="100" width="340" height="190" rx="16" fill="url(#pumpBody)" stroke="#cbd5e1" stroke-width="3"/>
+    
+    <!-- Pole Clamp Behind -->
+    <rect x="375" y="140" width="50" height="30" rx="4" fill="#334155"/>
+    
+    <!-- Display Screen -->
+    <rect x="250" y="125" width="180" height="90" rx="8" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+    <text x="260" y="150" font-family="sans-serif" font-size="12" fill="#22c55e" font-weight="bold">RATE: 125.0 mL/h</text>
+    <text x="260" y="175" font-family="sans-serif" font-size="11" fill="#38bdf8">VOL INF: 450 mL</text>
+    <text x="260" y="200" font-family="sans-serif" font-size="11" fill="#fbbf24">DOSE: NORADRENALINE</text>
+
+    <!-- Syringe Driver / Tubing Channel Door -->
+    <rect x="445" y="125" width="105" height="150" rx="8" fill="#f8fafc" stroke="#0d9488" stroke-width="2"/>
+    <rect x="475" y="140" width="45" height="110" rx="6" fill="#e0f2fe" stroke="#38bdf8" stroke-width="1.5"/>
+    <!-- Syringe Plunger -->
+    <rect x="485" y="115" width="25" height="40" fill="#94a3b8"/>
+    <line x1="497" y1="155" x2="497" y2="245" stroke="#0284c7" stroke-width="3"/>
+    
+    <!-- Control Buttons -->
+    <rect x="250" y="230" width="55" height="36" rx="6" fill="#10b981"/>
+    <text x="277" y="253" font-family="sans-serif" font-size="11" fill="#ffffff" font-weight="bold" text-anchor="middle">START</text>
+
+    <rect x="315" y="230" width="55" height="36" rx="6" fill="#ef4444"/>
+    <text x="342" y="253" font-family="sans-serif" font-size="11" fill="#ffffff" font-weight="bold" text-anchor="middle">STOP</text>
+
+    <rect x="380" y="230" width="50" height="36" rx="6" fill="#0284c7"/>
+    <text x="405" y="253" font-family="sans-serif" font-size="11" fill="#ffffff" font-weight="bold" text-anchor="middle">BOLUS</text>
+  </g>
+
+  <!-- Infusion Pump 2 (Stacked Lower Unit) -->
+  <g filter="url(#dropShadow)">
+    <rect x="230" y="320" width="340" height="190" rx="16" fill="url(#pumpBody)" stroke="#cbd5e1" stroke-width="3"/>
+    
+    <!-- Display Screen -->
+    <rect x="250" y="345" width="180" height="90" rx="8" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+    <text x="260" y="370" font-family="sans-serif" font-size="12" fill="#22c55e" font-weight="bold">RATE: 50.0 mL/h</text>
+    <text x="260" y="395" font-family="sans-serif" font-size="11" fill="#38bdf8">VOL INF: 180 mL</text>
+    <text x="260" y="420" font-family="sans-serif" font-size="11" fill="#a78bfa">DOSE: INSULIN INFUSION</text>
+
+    <!-- Syringe Driver / Tubing Channel Door -->
+    <rect x="445" y="345" width="105" height="150" rx="8" fill="#f8fafc" stroke="#0d9488" stroke-width="2"/>
+    <rect x="475" y="360" width="45" height="110" rx="6" fill="#e0f2fe" stroke="#38bdf8" stroke-width="1.5"/>
+    <!-- Syringe Plunger -->
+    <rect x="485" y="335" width="25" height="40" fill="#94a3b8"/>
+    <line x1="497" y1="375" x2="497" y2="465" stroke="#0284c7" stroke-width="3"/>
+    
+    <!-- Control Buttons -->
+    <rect x="250" y="450" width="55" height="36" rx="6" fill="#10b981"/>
+    <text x="277" y="473" font-family="sans-serif" font-size="11" fill="#ffffff" font-weight="bold" text-anchor="middle">START</text>
+
+    <rect x="315" y="450" width="55" height="36" rx="6" fill="#ef4444"/>
+    <text x="342" y="473" font-family="sans-serif" font-size="11" fill="#ffffff" font-weight="bold" text-anchor="middle">STOP</text>
+
+    <rect x="380" y="450" width="50" height="36" rx="6" fill="#0284c7"/>
+    <text x="405" y="473" font-family="sans-serif" font-size="11" fill="#ffffff" font-weight="bold" text-anchor="middle">BOLUS</text>
+  </g>
+
+  <!-- IV Tubing Lines Out -->
+  <path d="M 497 275 C 530 290, 560 300, 570 340 S 590 440, 600 520" fill="none" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 497 495 C 520 510, 550 520, 580 540" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Badge Header -->
+  <rect x="250" y="20" width="300" height="34" rx="17" fill="#0d9488"/>
+  <text x="400" y="42" font-family="sans-serif" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle">VOLUMETRIC INFUSION &amp; SYRINGE PUMP</text>
+</svg>
