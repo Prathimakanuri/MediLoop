@@ -7,7 +7,7 @@ import { User } from '@/types';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password?: string) => Promise<boolean>;
+  login: (email: string, password?: string) => Promise<User | null>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -15,7 +15,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  login: async () => false,
+  login: async () => null,
   logout: async () => {},
   refreshUser: async () => {},
 });
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchCurrentUser();
   }, []);
 
-  const login = async (email: string, password?: string): Promise<boolean> => {
+  const login = async (email: string, password?: string): Promise<User | null> => {
     setLoading(true);
     try {
       const res = await fetch('/api/auth/login', {
@@ -57,13 +57,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user || null);
-        return true;
+        const authenticatedUser = data.user || null;
+        setUser(authenticatedUser);
+        return authenticatedUser;
       }
-      return false;
+      setUser(null);
+      return null;
     } catch (err) {
       console.error('Login error:', err);
-      return false;
+      setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }

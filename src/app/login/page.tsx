@@ -38,29 +38,15 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Invalid email or password.');
-        setLoading(false);
-        return;
-      }
-
       const authenticated = await login(email.trim(), password);
       if (!authenticated) {
-        setError('Authentication succeeded on the server, but the session could not be loaded. Please try again.');
+        setError('Invalid email or password.');
         setLoading(false);
         return;
       }
 
       // Successful login redirect based on role
-      if (data.user?.role === 'PROVIDER') {
+      if (authenticated.role === 'PROVIDER') {
         router.push('/provider');
       } else {
         router.push('/dashboard');
