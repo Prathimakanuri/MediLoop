@@ -54,7 +54,10 @@ export default function SignupPage() {
         body: JSON.stringify(formData),
       });
 
-      const data = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      const data = contentType.includes('application/json')
+        ? await res.json()
+        : { error: 'Registration service is unavailable. Please try again shortly.' };
 
       if (!res.ok) {
         setError(data.error || 'Registration failed. Please try again.');
@@ -69,7 +72,8 @@ export default function SignupPage() {
       router.push('/login?registered=1');
       router.refresh();
     } catch (err) {
-      setError('Network error. Please try again.');
+      console.error('Registration request failed:', err);
+      setError('Unable to reach the registration service. Please check the deployment and try again.');
       setLoading(false);
     }
   };

@@ -94,3 +94,5 @@ MEDILOOP_PERSISTENT_DISK="true"
 ```
 
 Mount `/data` as persistent storage on the deployment host, configure both variables above, and run `npx prisma db push` before deploying. Do not use `file:./dev.db` on an ephemeral serverless host. If deploying to Vercel or another serverless platform, first migrate the Prisma datasource to a supported hosted database such as PostgreSQL; do not point this SQLite schema at a PostgreSQL URL.
+
+After deployment, verify `https://YOUR-DOMAIN/api/health` returns `{"status":"ok","database":"connected"}`. A `503` response means the deployment database is unavailable; registration cannot work until the persistent disk/database configuration is corrected.
