@@ -4,11 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { HeartPulse, Building2, Mail, Lock, Phone, MapPin, ArrowRight, ShieldCheck, AlertCircle, User as UserIcon } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { refreshUser } = useAuth();
   const [formData, setFormData] = useState({
     hospitalName: '',
     doctorName: '',
@@ -64,15 +62,11 @@ export default function SignupPage() {
         return;
       }
 
-      // Refresh AuthContext with the newly created real user profile
-      await refreshUser();
-
-      // Route to role-specific dashboard
-      if (formData.role === 'PROVIDER') {
-        router.push('/provider');
-      } else {
-        router.push('/dashboard');
-      }
+      setFormData({
+        hospitalName: '', doctorName: '', facilityType: 'Community Hospital', tier: 'Tier-3',
+        city: 'Yavatmal', address: '', email: '', phone: '', password: '', role: 'CUSTOMER',
+      });
+      router.push('/login?registered=1');
       router.refresh();
     } catch (err) {
       setError('Network error. Please try again.');

@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
@@ -28,6 +28,10 @@ export default async function RequestSentPage({
 }) {
   const user = await getCurrentUser();
 
+  if (!user) {
+    redirect('/login');
+  }
+
   const request = await prisma.equipmentRequest.findUnique({
     where: { id: params.id },
     include: {
@@ -43,6 +47,10 @@ export default async function RequestSentPage({
 
   if (!request) {
     notFound();
+  }
+
+  if (request.requesterId !== user.id) {
+    redirect('/requests');
   }
 
   const statusInfo = getStatusColor(request.status);

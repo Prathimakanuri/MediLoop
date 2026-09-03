@@ -27,9 +27,12 @@ export async function POST(
       return NextResponse.json({ error: 'Booking record not found.' }, { status: 404 });
     }
 
-    // Ensure booking is in ACCEPTED / AWAITING_PAYMENT state
-    if (booking.status === 'REJECTED' || booking.status === 'CANCELLED') {
-      return NextResponse.json({ error: 'Cannot process payment for a rejected or cancelled booking.' }, { status: 400 });
+    if (user.role !== 'CUSTOMER' || booking.requesterId !== user.id) {
+      return NextResponse.json({ error: 'Only the requesting customer can pay for this booking.' }, { status: 403 });
+    }
+
+    if (!['PAYMENT_REQUIRED', 'FAILED'].includes(booking.paymentStatus) || booking.status !== 'AWAITING_PAYMENT') {
+      return NextResponse.json({ error: 'This booking is not awaiting online payment.' }, { status: 400 });
     }
 
     // SIMULATED PAYMENT FAILURE FLOW

@@ -31,7 +31,7 @@ export async function setSessionUser(email: string) {
   cookieStore.set(AUTH_COOKIE_NAME, email.toLowerCase().trim(), {
     path: '/',
     maxAge: 60 * 60 * 24 * 30, // 30 days
-    httpOnly: false, // allow client-side sync
+    httpOnly: true,
     sameSite: 'lax',
   });
 }

@@ -7,6 +7,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const booking = await prisma.booking.findUnique({
       where: { id: params.id },
       include: {
@@ -23,6 +28,12 @@ export async function GET(
 
     if (!booking) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+    }
+
+    const canView = booking.requesterId === user.id
+      || (user.role === 'PROVIDER' && user.facilityId === booking.providerId);
+    if (!canView) {
+      return NextResponse.json({ error: 'You do not have access to this booking' }, { status: 403 });
     }
 
     return NextResponse.json({ booking });

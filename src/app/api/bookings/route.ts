@@ -13,16 +13,12 @@ export async function GET(req: NextRequest) {
     const view = searchParams.get('view');
 
     let bookings;
-    if (view === 'provider' || user.role === 'PROVIDER') {
+    if (user.role === 'PROVIDER') {
+      if (!user.facilityId) {
+        return NextResponse.json({ error: 'Provider is not linked to a facility' }, { status: 403 });
+      }
       bookings = await prisma.booking.findMany({
-        where: {
-          OR: [
-            { providerId: user.facilityId || '' },
-            { providerId: user.id },
-            { equipment: { providerId: user.facilityId || '' } },
-            { equipment: { provider: { users: { some: { id: user.id } } } } },
-          ],
-        },
+        where: { providerId: user.facilityId },
         include: {
           equipment: { include: { category: true } },
           requester: { include: { facility: true } },
@@ -31,6 +27,8 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { createdAt: 'desc' },
       });
+    } else if (view === 'provider') {
+      return NextResponse.json({ error: 'Provider access required' }, { status: 403 });
     } else {
       bookings = await prisma.booking.findMany({
         where: { requesterId: user.id },

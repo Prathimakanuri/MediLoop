@@ -36,10 +36,30 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (user.role !== 'PROVIDER' || !user.facilityId) {
+      return NextResponse.json({ error: 'Provider access required' }, { status: 403 });
+    }
+
+    const equipment = await prisma.equipment.findUnique({ where: { id: params.id } });
+    if (!equipment) {
+      return NextResponse.json({ error: 'Equipment not found' }, { status: 404 });
+    }
+    if (equipment.providerId !== user.facilityId) {
+      return NextResponse.json({ error: 'You do not own this equipment' }, { status: 403 });
+    }
+
     const body = await req.json();
+    const allowedFields = [
+      'name', 'model', 'categoryId', 'description', 'pricePerDay', 'depositAmount',
+      'condition', 'yearOfManufacture', 'usageType', 'accessories', 'deliveryAvailable',
+      'powerRequirements', 'imageUrl', 'availability',
+    ];
+    const data = Object.fromEntries(
+      Object.entries(body).filter(([field]) => allowedFields.includes(field))
+    );
     const updated = await prisma.equipment.update({
       where: { id: params.id },
-      data: body,
+      data,
       include: {
         category: true,
         provider: true,

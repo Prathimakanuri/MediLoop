@@ -27,10 +27,26 @@ export async function POST(
       return NextResponse.json({ error: 'Request not found' }, { status: 404 });
     }
 
+    const providerOwnsRequest = user.role === 'PROVIDER' && user.facilityId === request.providerId;
+    const customerOwnsRequest = user.role === 'CUSTOMER' && user.id === request.requesterId;
+
+    if (request.status !== 'PENDING' && action !== 'CANCEL') {
+      return NextResponse.json({ error: 'This request has already been decided' }, { status: 409 });
+    }
+
     if (action === 'REJECT') {
+      if (!providerOwnsRequest) {
+        return NextResponse.json({ error: 'Only the equipment provider can reject this request' }, { status: 403 });
+      }
+
       const updatedRequest = await prisma.equipmentRequest.update({
         where: { id: params.id },
         data: { status: 'REJECTED' },
+      });
+
+      await prisma.booking.updateMany({
+        where: { requestId: request.id },
+        data: { status: 'REJECTED', paymentStatus: 'NOT_AVAILABLE' },
       });
 
       // Notify Customer of Rejection
@@ -52,6 +68,10 @@ export async function POST(
     }
 
     if (action === 'ACCEPT') {
+      if (!providerOwnsRequest) {
+        return NextResponse.json({ error: 'Only the equipment provider can accept this request' }, { status: 403 });
+      }
+
       const updatedRequest = await prisma.equipmentRequest.update({
         where: { id: params.id },
         data: { status: 'ACCEPTED' },
@@ -111,6 +131,10 @@ export async function POST(
     }
 
     if (action === 'CANCEL') {
+      if (!customerOwnsRequest) {
+        return NextResponse.json({ error: 'Only the requesting customer can cancel this request' }, { status: 403 });
+      }
+
       const updatedRequest = await prisma.equipmentRequest.update({
         where: { id: params.id },
         data: { status: 'CANCELLED' },

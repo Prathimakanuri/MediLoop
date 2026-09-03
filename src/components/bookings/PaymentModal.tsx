@@ -180,7 +180,7 @@ export function PaymentModal({ booking, onClose, onSuccess }: PaymentModalProps)
               </div>
             </div>
 
-            {/* Payment Method Selector (Online Payment ONLY - No COD) */}
+            {/* Payment method selector */}
             <div className="space-y-3">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Select Online Payment Method

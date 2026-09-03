@@ -50,7 +50,7 @@ export function RequestCard({
 
             {isAccepted && (
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 animate-pulse">
-                <Clock className="w-3 h-3 text-amber-700" /> Payment Required (Unpaid)
+                <Clock className="w-3 h-3 text-amber-700" /> Payment Required
               </span>
             )}
 

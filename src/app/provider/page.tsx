@@ -69,6 +69,11 @@ export default function ProviderDashboardPage() {
         return;
       }
 
+      if (user.role !== 'PROVIDER') {
+        router.push('/dashboard');
+        return;
+      }
+
       // Fetch isolated data for this specific provider facility
       const facilityId = user.facilityId || '';
       const [catRes, reqRes, bRes, eqRes] = await Promise.all([

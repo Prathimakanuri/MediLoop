@@ -206,7 +206,7 @@ export default function BookingPassPage() {
                   </span>
                 ) : (
                   <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" /> Payment Required (Unpaid)
+                    <Clock className="w-3.5 h-3.5" /> Payment Required
                   </span>
                 )}
               </div>

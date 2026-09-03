@@ -29,7 +29,7 @@ export default function PaymentsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'ALL' | 'PAID' | 'UNPAID'>('ALL');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'PAID' | 'AWAITING_PAYMENT'>('ALL');
   const [selectedBookingForPayment, setSelectedBookingForPayment] = useState<Booking | null>(null);
 
   const loadPaymentData = async () => {
@@ -80,7 +80,7 @@ export default function PaymentsPage() {
 
   const filteredBookings = bookings.filter((b) => {
     if (activeTab === 'PAID') return b.paymentStatus === 'PAID';
-    if (activeTab === 'UNPAID') return b.paymentStatus === 'PAYMENT_REQUIRED' || b.paymentStatus === 'FAILED' || b.paymentStatus === 'PENDING';
+    if (activeTab === 'AWAITING_PAYMENT') return b.paymentStatus === 'PAYMENT_REQUIRED' || b.paymentStatus === 'FAILED' || b.paymentStatus === 'PENDING';
     return true;
   });
 
@@ -179,9 +179,9 @@ export default function PaymentsPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab('UNPAID')}
+            onClick={() => setActiveTab('AWAITING_PAYMENT')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              activeTab === 'UNPAID'
+                              activeTab === 'AWAITING_PAYMENT'
                 ? 'bg-amber-500 text-white shadow-sm'
                 : 'bg-white text-amber-800 hover:bg-amber-50 border border-amber-200'
             }`}
@@ -300,7 +300,7 @@ export default function PaymentsPage() {
                               href={`/bookings/${b.id}`}
                               className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors inline-block whitespace-nowrap"
                             >
-                              {isPaid ? 'View Tax Receipt' : 'View Pass (Unpaid)'}
+                              {isPaid ? 'View Tax Receipt' : 'View Pass (Payment Pending)'}
                             </Link>
                           )}
                         </td>

@@ -1,20 +1,26 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { HeartPulse, Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, AlertCircle, Building2, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { HeartPulse, Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { refreshUser } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showDemoAccordion, setShowDemoAccordion] = useState(false);
+  const [registrationMessage, setRegistrationMessage] = useState('');
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('registered') === '1') {
+      setRegistrationMessage('Registration successful. Please log in to continue.');
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,8 +52,12 @@ export default function LoginPage() {
         return;
       }
 
-      // Update global AuthContext with authenticated user
-      await refreshUser();
+      const authenticated = await login(email.trim(), password);
+      if (!authenticated) {
+        setError('Authentication succeeded on the server, but the session could not be loaded. Please try again.');
+        setLoading(false);
+        return;
+      }
 
       // Successful login redirect based on role
       if (data.user?.role === 'PROVIDER') {
@@ -60,12 +70,6 @@ export default function LoginPage() {
       setError('Network connection failed. Please try again.');
       setLoading(false);
     }
-  };
-
-  const handleDemoFill = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setError('');
   };
 
   return (
@@ -92,6 +96,11 @@ export default function LoginPage() {
         {/* Main Member Login Box */}
         <div className="bg-white py-7 px-6 sm:px-8 shadow-card rounded-3xl border border-slate-200/80">
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {!error && (registrationMessage || '') && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs">
+                {registrationMessage}
+              </div>
+            )}
             {error && (
               <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -174,58 +183,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Test Accounts Collapsible Section */}
-        <div className="rounded-3xl bg-slate-50/90 border border-slate-200/90 shadow-soft overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setShowDemoAccordion(!showDemoAccordion)}
-            className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-100/60 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <span className="text-xs font-bold text-slate-700">
-                Evaluation Test Credentials (Click to expand)
-              </span>
-            </div>
-            {showDemoAccordion ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-          </button>
-
-          {showDemoAccordion && (
-            <div className="p-4 pt-0 space-y-2 border-t border-slate-200/50 animate-in fade-in duration-150">
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Click below to auto-fill pre-seeded testing credentials:
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleDemoFill('customer@test.com', 'password123')}
-                  className="p-2.5 rounded-2xl bg-white border border-slate-200 text-left hover:border-teal-400 hover:bg-teal-50/30 transition-all shadow-sm"
-                >
-                  <div className="flex items-center gap-1 font-bold text-teal-800 text-[11px]">
-                    <Building2 className="w-3.5 h-3.5 text-teal-600" />
-                    <span>Test Customer</span>
-                  </div>
-                  <p className="text-[10px] text-slate-600 mt-0.5 truncate font-medium">customer@test.com</p>
-                  <p className="text-[9px] text-slate-400 font-mono mt-0.5">Pass: password123 (Avatar: TC)</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleDemoFill('provider@test.com', 'password123')}
-                  className="p-2.5 rounded-2xl bg-white border border-slate-200 text-left hover:border-blue-400 hover:bg-blue-50/30 transition-all shadow-sm"
-                >
-                  <div className="flex items-center gap-1 font-bold text-blue-800 text-[11px]">
-                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Test Provider</span>
-                  </div>
-                  <p className="text-[10px] text-slate-600 mt-0.5 truncate font-medium">provider@test.com</p>
-                  <p className="text-[9px] text-slate-400 font-mono mt-0.5">Pass: password123 (Avatar: TP)</p>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

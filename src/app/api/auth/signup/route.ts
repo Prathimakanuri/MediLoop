@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { setSessionUser } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -70,13 +69,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 3. Set authenticated session cookie
-    await setSessionUser(user.email);
-
     return NextResponse.json({
       success: true,
-      user,
-      message: 'Account created successfully with a fresh, isolated hospital profile.',
+      message: 'Registration successful. Please log in to continue.',
     });
   } catch (err: any) {
     console.error('Registration error:', err);

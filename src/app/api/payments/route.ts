@@ -11,15 +11,11 @@ export async function GET(req: NextRequest) {
 
     let payments;
     if (user.role === 'PROVIDER') {
+      if (!user.facilityId) {
+        return NextResponse.json({ error: 'Provider is not linked to a facility' }, { status: 403 });
+      }
       payments = await prisma.payment.findMany({
-        where: {
-          OR: [
-            { providerId: user.facilityId || '' },
-            { providerId: user.id },
-            { booking: { providerId: user.facilityId || '' } },
-            { booking: { provider: { users: { some: { id: user.id } } } } },
-          ],
-        },
+        where: { providerId: user.facilityId },
         include: {
           booking: { include: { equipment: true, requester: { include: { facility: true } } } },
           customer: { include: { facility: true } },

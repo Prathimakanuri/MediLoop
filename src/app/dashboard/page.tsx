@@ -34,6 +34,10 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
+  if (user.role === 'PROVIDER') {
+    redirect('/provider');
+  }
+
   const isProvider = user.role === 'PROVIDER';
   const facilityName = user.facility?.name || user.name;
 

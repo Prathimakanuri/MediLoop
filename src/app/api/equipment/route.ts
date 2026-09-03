@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user || !user.facilityId) {
+    if (!user || user.role !== 'PROVIDER' || !user.facilityId) {
       return NextResponse.json({ error: 'Unauthorized or no facility linked' }, { status: 401 });
     }
 

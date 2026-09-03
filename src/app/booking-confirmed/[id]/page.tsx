@@ -140,7 +140,7 @@ export default function BookingConfirmedPage() {
                 </span>
               ) : (
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                  Payment Unpaid
+                  Payment Pending
                 </span>
               )}
             </div>

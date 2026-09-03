@@ -13,17 +13,14 @@ export async function GET(req: NextRequest) {
     const view = searchParams.get('view'); // 'provider' or 'customer'
 
     let requests;
-    if (view === 'provider' || user.role === 'PROVIDER') {
-      // Find all requests for equipment owned by this provider / facility
+    if (user.role === 'PROVIDER') {
+      if (!user.facilityId) {
+        return NextResponse.json({ error: 'Provider is not linked to a facility' }, { status: 403 });
+      }
+
+      // A provider can only see requests addressed to its own facility.
       requests = await prisma.equipmentRequest.findMany({
-        where: {
-          OR: [
-            { providerId: user.facilityId || '' },
-            { providerId: user.id },
-            { equipment: { providerId: user.facilityId || '' } },
-            { equipment: { provider: { users: { some: { id: user.id } } } } },
-          ],
-        },
+        where: { providerId: user.facilityId },
         include: {
           equipment: { include: { category: true, provider: true } },
           requester: { include: { facility: true } },
@@ -32,6 +29,8 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { createdAt: 'desc' },
       });
+    } else if (view === 'provider') {
+      return NextResponse.json({ error: 'Provider access required' }, { status: 403 });
     } else {
       // Customer view: only their own requests
       requests = await prisma.equipmentRequest.findMany({
@@ -116,13 +115,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Dispatch Notification strictly to the equipment provider user(s)
     const providerUsers = await prisma.user.findMany({
-      where: {
-        OR: [
-          { facilityId: equipment.providerId },
-          { id: equipment.providerId },
-          { facility: { equipment: { some: { id: equipment.id } } } },
-        ],
-      },
+      where: { facilityId: equipment.providerId, role: 'PROVIDER' },
     });
 
     for (const pUser of providerUsers) {
