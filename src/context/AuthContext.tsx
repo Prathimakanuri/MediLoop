@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { User } from '@/types';
 
@@ -23,11 +23,15 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const authOperation = useRef(0);
   const router = useRouter();
 
   const fetchCurrentUser = async () => {
+    const operation = ++authOperation.current;
     try {
       const res = await fetch('/api/auth/me', { cache: 'no-store' });
+      if (operation !== authOperation.current) return;
+
       if (res.ok) {
         const data = await res.json();
         setUser(data.user || null);
@@ -35,10 +39,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
       }
     } catch (err) {
+      if (operation !== authOperation.current) return;
       console.error('Failed to load authenticated user:', err);
       setUser(null);
     } finally {
-      setLoading(false);
+      if (operation === authOperation.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -47,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password?: string): Promise<User | null> => {
+    const operation = ++authOperation.current;
     setLoading(true);
     try {
       const res = await fetch('/api/auth/login', {
@@ -58,14 +66,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         const authenticatedUser = data.user || null;
-        setUser(authenticatedUser);
+        if (operation === authOperation.current) {
+          setUser(authenticatedUser);
+        }
         return authenticatedUser;
       }
-      setUser(null);
+      if (operation === authOperation.current) setUser(null);
       return null;
     } catch (err) {
       console.error('Login error:', err);
-      setUser(null);
+      if (operation === authOperation.current) setUser(null);
       return null;
     } finally {
       setLoading(false);
@@ -73,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    ++authOperation.current;
     setLoading(true);
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
