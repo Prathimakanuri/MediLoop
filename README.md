@@ -17,11 +17,11 @@ Small and rural healthcare facilities frequently struggle to access costly medic
 ## 🌟 Complete End-to-End User Journey (10+ Screens)
 
 1. **Screen 1: Splash / Onboarding (`/`)**
-   - Brand identity, tagline *"Share. Connect. Save Lives."*, impact metrics, and equipment preview.
+   - Brand identity, tagline _"Share. Connect. Save Lives."_, impact metrics, and equipment preview.
 2. **Screen 2: Login / Sign Up (`/login`, `/signup`)**
    - Authentication with 1-click demo autofill pills for instant customer & provider simulation.
 3. **Screen 3: Home / Dashboard (`/dashboard`)**
-   - Live greeting for *City Care Hospital*, dynamic search bar, quick actions, category carousel with item counts, and nearby verified equipment.
+   - Live greeting for _City Care Hospital_, dynamic search bar, quick actions, category carousel with item counts, and nearby verified equipment.
 4. **Screens 4 & 5: Search Equipment & Live Results (`/search`)**
    - Real-time search query matching and multi-dimensional filters (Category, Distance, Price Range, Availability status, Sorting) with live result count counter.
 5. **Screen 6: Equipment Details (`/equipment/[id]`)**
@@ -49,11 +49,11 @@ Small and rural healthcare facilities frequently struggle to access costly medic
 
 Use the interactive **"Simulating: [Facility Name]"** pill in the top header or log in directly with:
 
-| Role | Hospital / Facility | Email | Password |
-| :--- | :--- | :--- | :--- |
-| **Requester / Customer** | City Care Hospital (Tier-3) | `demo@mediloop.com` | `demo123` |
-| **Equipment Provider** | City Hospital & Research (Tier-2) | `provider@mediloop.com` | `demo123` |
-| **Specialty Provider** | HealthPlus Trauma Clinic (Semi-Urban) | `vikram@healthplus.com` | `demo123` |
+| Role                     | Hospital / Facility                   | Email                   | Password  |
+| :----------------------- | :------------------------------------ | :---------------------- | :-------- |
+| **Requester / Customer** | City Care Hospital (Tier-3)           | `demo@mediloop.com`     | `demo123` |
+| **Equipment Provider**   | City Hospital & Research (Tier-2)     | `provider@mediloop.com` | `demo123` |
+| **Specialty Provider**   | HealthPlus Trauma Clinic (Semi-Urban) | `vikram@healthplus.com` | `demo123` |
 
 ---
 
@@ -81,3 +81,16 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## 🚀 Production Deployment
+
+The current Prisma schema uses SQLite. Production must therefore run on a host with a persistent mounted disk. Serverless deployments with ephemeral filesystems (including the default Vercel filesystem) are not compatible with this database architecture: signup data can disappear between function instances, which causes the deployed login failure.
+
+Configure this environment variable in the deployment platform before building:
+
+```bash
+DATABASE_URL="file:/data/mediloop.db"
+MEDILOOP_PERSISTENT_DISK="true"
+```
+
+Mount `/data` as persistent storage on the deployment host, configure both variables above, and run `npx prisma db push` before deploying. Do not use `file:./dev.db` on an ephemeral serverless host. If deploying to Vercel or another serverless platform, first migrate the Prisma datasource to a supported hosted database such as PostgreSQL; do not point this SQLite schema at a PostgreSQL URL.
