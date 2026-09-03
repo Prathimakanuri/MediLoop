@@ -7,9 +7,9 @@ import { Header } from '../../../components/common/Header';
 import { MobileNav } from '@/components/common/MobileNav';
 import { Footer } from '@/components/common/Footer';
 import { EquipmentImage } from '@/components/common/EquipmentImage';
-import { PaymentModal } from '@/components/bookings/PaymentModal';
+import { PaymentModal } from '../../../components/bookings/PaymentModal';
 import { Booking, User } from '@/types';
-import { formatDate, formatCurrency, getStatusColor } from '@/lib/utils';
+import { formatDate, formatCurrency, getStatusColor } from '../../../lib/utils';
 import {
   ArrowLeft,
   Building2,
