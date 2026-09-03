@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Header } from '@/components/common/Header';
+import { Header } from '../../../components/common/Header';
 import { MobileNav } from '@/components/common/MobileNav';
 import { Footer } from '@/components/common/Footer';
 import { EquipmentImage } from '@/components/common/EquipmentImage';
