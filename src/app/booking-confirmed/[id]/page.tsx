@@ -4,13 +4,13 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import confetti from 'canvas-confetti';
-import { Header } from '../../../components/common/Header';
-import { MobileNav } from '../../../components/common/MobileNav';
-import { Footer } from '../../../components/common/Footer';
-import { EquipmentImage } from '../../../components/common/EquipmentImage';
-import { PaymentModal } from '../../../components/bookings/PaymentModal';
-import { Booking, User } from '../../../types';
-import { formatDate, formatCurrency, getStatusColor } from '../../../lib/utils';
+import { Header } from '@/components/common/Header';
+import { MobileNav } from '@/components/common/MobileNav';
+import { Footer } from '@/components/common/Footer';
+import { EquipmentImage } from '@/components/common/EquipmentImage';
+import { PaymentModal } from '@/components/bookings/PaymentModal';
+import { Booking, User } from '@/types';
+import { formatDate, formatCurrency, getStatusColor } from '@/lib/utils';
 import {
   CheckCircle2,
   CalendarCheck,

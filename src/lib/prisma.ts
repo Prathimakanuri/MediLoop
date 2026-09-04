@@ -3,29 +3,23 @@ import path from 'path';
 
 function getDatabaseUrl(): string {
   const envUrl = process.env.DATABASE_URL;
-  const isProductionRuntime = process.env.NODE_ENV === 'production';
-  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
   const isServerless = Boolean(
     process.env.VERCEL ||
     process.env.AWS_LAMBDA_FUNCTION_NAME ||
     process.env.LAMBDA_TASK_ROOT
   );
 
-  const isPersistentFileDatabase = Boolean(envUrl && envUrl.startsWith('file:/'));
-
-  if (isPersistentFileDatabase && (process.env.MEDILOOP_PERSISTENT_DISK === 'true' || !isProductionRuntime)) {
-    return envUrl!;
+  if (envUrl) {
+    if (isServerless && !process.env.MEDILOOP_PERSISTENT_DISK) {
+      throw new Error(
+        'Ephemeral serverless filesystems (e.g. Vercel) are not supported by SQLite without persistent storage. Deploy to Render with persistent disk or use a hosted database.'
+      );
+    }
+    return envUrl;
   }
 
-  if ((!isProductionRuntime && !isServerless) || isBuildPhase) {
-    const localDbPath = path.join(process.cwd(), 'prisma', 'dev.db');
-    return `file:${localDbPath}`;
-  }
-
-  throw new Error(
-    'Production requires a persistent SQLite DATABASE_URL on a mounted disk. ' +
-    'Ephemeral serverless filesystems are not supported by this application.'
-  );
+  const localDbPath = path.join(process.cwd(), 'prisma', 'dev.db');
+  return `file:${localDbPath}`;
 }
 
 const resolvedDbUrl = getDatabaseUrl();

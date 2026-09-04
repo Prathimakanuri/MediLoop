@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Header } from '../../components/common/Header';
-import { MobileNav } from '../../components/common/MobileNav';
+import { Header } from '@/components/common/Header';
+import { MobileNav } from '@/components/common/MobileNav';
 import { Footer } from '@/components/common/Footer';
 import { BookingCard } from '@/components/bookings/BookingCard';
 import { Booking, User } from '@/types';
