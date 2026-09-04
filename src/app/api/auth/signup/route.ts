@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -71,13 +73,9 @@ export async function POST(req: NextRequest) {
       message: 'Registration successful. Please log in to continue.',
     });
   } catch (err: any) {
-    console.error('Registration error:', {
-      name: err?.name,
-      code: err?.code,
-      message: err?.message,
-    });
+    console.error('Registration error:', err);
     return NextResponse.json(
-      { error: 'Registration service is temporarily unavailable. Please verify the deployment database configuration and try again.' },
+      { error: err?.message || 'Registration service is temporarily unavailable. Please try again.' },
       { status: 500 }
     );
   }
