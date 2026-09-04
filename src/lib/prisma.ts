@@ -1,54 +1,76 @@
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { DEFAULT_SQLITE_BASE64 } from './db-seed-fallback';
 
-function initDatabase(): string {
-  const envUrl = process.env.DATABASE_URL;
-  let targetPath: string;
-
-  if (envUrl && envUrl.startsWith('file:')) {
-    const rawPath = envUrl.replace(/^file:/, '');
-    if (path.isAbsolute(rawPath)) {
-      targetPath = rawPath;
-    } else if (rawPath.startsWith('./dev.db') || rawPath === 'dev.db') {
-      targetPath = path.join(process.cwd(), 'prisma', 'dev.db');
-    } else {
-      targetPath = path.resolve(process.cwd(), rawPath);
-    }
-  } else if (envUrl && !envUrl.startsWith('file:')) {
-    // Non-sqlite database URL (PostgreSQL, MySQL, etc.)
-    return envUrl;
-  } else {
-    targetPath = path.join(process.cwd(), 'prisma', 'dev.db');
-  }
-
-  // Ensure target directory exists
+function tryInitializeLocation(candidatePath: string): boolean {
   try {
-    const dir = path.dirname(targetPath);
+    const dir = path.dirname(candidatePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    // If target file doesn't exist or is 0 bytes, populate it with seed database
-    const fileExists = fs.existsSync(targetPath);
-    const isEmpty = fileExists && fs.statSync(targetPath).size === 0;
+    const fileExists = fs.existsSync(candidatePath);
+    const isEmpty = fileExists && fs.statSync(candidatePath).size === 0;
 
     if (!fileExists || isEmpty) {
       const sourceDb = path.join(process.cwd(), 'prisma', 'dev.db');
-      if (fs.existsSync(sourceDb) && fs.statSync(sourceDb).size > 0 && sourceDb !== targetPath) {
-        fs.copyFileSync(sourceDb, targetPath);
-        console.log(`[MediLoop DB] Copied pre-seeded database to ${targetPath}`);
+      if (fs.existsSync(sourceDb) && fs.statSync(sourceDb).size > 0 && path.resolve(sourceDb) !== path.resolve(candidatePath)) {
+        fs.copyFileSync(sourceDb, candidatePath);
       } else if (DEFAULT_SQLITE_BASE64) {
-        fs.writeFileSync(targetPath, Buffer.from(DEFAULT_SQLITE_BASE64, 'base64'));
-        console.log(`[MediLoop DB] Initialized fresh SQLite database at ${targetPath}`);
+        fs.writeFileSync(candidatePath, Buffer.from(DEFAULT_SQLITE_BASE64, 'base64'));
       }
     }
-  } catch (err) {
-    console.error('[MediLoop DB] Auto-initialization notice:', err);
+
+    // Verify read and write access
+    fs.accessSync(candidatePath, fs.constants.R_OK | fs.constants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function initDatabase(): string {
+  const envUrl = process.env.DATABASE_URL;
+
+  // If using external hosted database (PostgreSQL, MySQL, etc.)
+  if (envUrl && !envUrl.startsWith('file:')) {
+    return envUrl;
   }
 
-  return `file:${targetPath}`;
+  const candidates: string[] = [];
+
+  // Candidate 1: User-configured DATABASE_URL
+  if (envUrl && envUrl.startsWith('file:')) {
+    const rawPath = envUrl.replace(/^file:/, '');
+    if (path.isAbsolute(rawPath)) {
+      candidates.push(rawPath);
+    } else if (rawPath.startsWith('./dev.db') || rawPath === 'dev.db') {
+      candidates.push(path.join(process.cwd(), 'prisma', 'dev.db'));
+    } else {
+      candidates.push(path.resolve(process.cwd(), rawPath));
+    }
+  }
+
+  // Candidate 2: Project prisma directory
+  candidates.push(path.join(process.cwd(), 'prisma', 'dev.db'));
+
+  // Candidate 3: Project root directory
+  candidates.push(path.join(process.cwd(), 'dev.db'));
+
+  // Candidate 4: Operating system temp directory (always writable on Linux/Render)
+  candidates.push(path.join(os.tmpdir(), 'mediloop.db'));
+
+  for (const candidate of candidates) {
+    if (tryInitializeLocation(candidate)) {
+      console.log(`[MediLoop DB] Connected to verified writable database: ${candidate}`);
+      return `file:${candidate}`;
+    }
+  }
+
+  const fallback = path.join(os.tmpdir(), 'mediloop.db');
+  return `file:${fallback}`;
 }
 
 const resolvedDbUrl = initDatabase();
